@@ -4,15 +4,18 @@ define(function(require, exports) {
 		var imageList = kodApp.imageList;
 		lastImageList = imageList || {};
 		kodApp.imageList = false;
+		var items  = [];
 		if(!imageList) {
-			imageList = {items:[{
+			imageList = {};
+			items.push({
 				src:core.pathImage(filePath,1200),srcFile:core.pathImage(filePath,false),
 				msrc:core.pathImage(filePath,250),
+				$dom:false,w:0,h:0,
 				trueImage:core.pathImage(filePath,false),
 				title:htmlEncode(name || ''),
-			}],index:0};
+			});
+			imageList.index = 0;
 		}
-		var items  = [];
 		_.each(imageList.items,function(item){
 			var parse = $.parseUrl(item.src);
 			var title = item.title || _.get(parse,'params.name') || pathTools.pathThis(item.src);
@@ -25,6 +28,14 @@ define(function(require, exports) {
 				w:item.width  || 0,h:item.height  || 0,
 				data:item,
 			});
+		});
+		
+		// 默认原图打开处理;
+		_.each(items,function(item){
+			if(openImageType != 'full' || !item.trueImage){return;}
+			item._src = item.src;
+			item.src = item.trueImage;
+			item.trueImage = ''
 		});
 		return {items:items,index:imageList.index};
 	};
@@ -445,10 +456,12 @@ define(function(require, exports) {
 		$image.css('transform',transform);
 	};
 	
+	var openImageType = 'big';//big/full;
 
 	//http://dimsemenov.com/plugins/royal-slider/gallery/
 	//http://photoswipe.com/documentation/faq.html
-	return function(path,ext,name,appStatic,appStaticDefault){
+	return function(path,ext,name,appStatic,appStaticDefault,showType){
+		openImageType = showType || 'big';
 		requireAsync([
 			appStaticDefault+'PhotoSwipe/photoSwipe.html',
 			appStatic+'PhotoSwipe/photoswipe.min',
