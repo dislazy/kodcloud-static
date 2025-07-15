@@ -15,13 +15,16 @@ return array(
 	'webdav.config.systemAutoMount'	=> "客户端自动挂载",
 	'webdav.config.systemAutoMountDesc'	=> "PC客户端打开时,自动挂载webdav",
 	
-	'webdav.tips.https'			=> "<b>https:</b> 推荐使用https, 加密传输更安全; (windows挂载webdav默认限制必须https,可以去除限制)",
+	'webdav.tips.https'			=> "<b>https:</b> 推荐使用https, 加密传输更安全;",
 	'webdav.tips.upload'		=> "<b>上传下载限制:</b> 支持上传最大文件取决于服务器上传限制及超时时间,	
 	可以根据自行需求进行设置;推荐上传文件大小限制:500MB; 超时时间 3600; <a href='https://doc.kodcloud.com/#/others/options' target='_blank'>了解更多</a>",
 	'webdav.tips.auth'			=> "<b>读写编辑等权限:</b> 读写等权限完全同于web端; 由于协议没有报错机制,操作不成功基本等同于没有权限",
 	'webdav.tips.uploadUser'	=> "<b>上传下载限制:</b> 支持上传最大文件取决于服务器上传限制及超时时间; 具体咨询管理员进行服务器上传相关配置.",
 	'webdav.tips.use'			=> "如何使用: 开启WebDAV服务后,进入个人中心进行查看(修改配置后需要刷新页面生效);",
 	'webdav.tips.use3thAccount'	=> "如启用了钉钉或企业微信，需设置密码后(能正常使用账号密码登录)方能使用webdav。",
+	'webdav.tips.configErr'		=> "您当前服务器不支持PATH_INFO模式<br/>形如 /index.php/index方式的访问;
+									同时不能丢失header参数Authorization;否则无法登录;
+									<a href='http://doc.kodcloud.com/v2/#/help/pathInfo' target='_blank'>了解如何开启</a>",
 	
 	'webdav.help.title'			=> "如何使用",
 	'webdav.help.connect'		=> "立即连接使用",
