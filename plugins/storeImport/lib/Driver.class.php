@@ -14,18 +14,18 @@ class impDriver {
         // 基础类是否存在
         $class    = 'PathDriver'.$sfxType;
         if( !class_exists($class) ){
-            throw new Exception('不支持的存储类型：'.$class);
+            throw new Exception(LNG('storeImport.main.ioNotSup').$class);
         }
         // 独立子类、S3系子类
         if (in_array($type, $this->ioList['sg'])) {
-            include_once(__DIR__.'/Driver'.$type.'.class.php'); // DriverOSS.class.php
+            include_once(__DIR__.'/Driver'.$sfxType.'.class.php'); // DriverOSS.class.php
             $class = 'impDrv'.$sfxType;
         } else if (in_array($type, $this->ioList['s3'])) {
             include_once(__DIR__.'/DriverS3.class.php');
             $class = 'impDrvS3';
         } 
         if( !class_exists($class) ){
-            throw new Exception('不支持的存储类型：'.$class);
+            throw new Exception(LNG('storeImport.main.ioNotSup').$class);
         }
         // 自定义子类是否存在
         $config = $store['config'];
@@ -48,12 +48,11 @@ class impDriver {
     /**
      * 获取文件列表
      * @param [type] $path
-     * @param string $delimiter
      * @return void yield [[path,size],...]
      */
-    public function listAll($path, $delimiter = ''){
+    public function listAll($path){
         $path = $this->getPathInner($path);    // {io:xx}/abc/ => /xx/abc/
-        return $this->driver->listAll($path, $delimiter);
+        return $this->driver->listAll($path);
     }
 }
 

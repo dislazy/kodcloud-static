@@ -2,7 +2,7 @@
 	"id":"officeViewer",
 	"name":"{{LNG['officeViewer.meta.name']}}",
 	"title":"{{LNG['officeViewer.meta.title']}}",
-	"version":"1.30",
+	"version":"1.34",
 	"category":"file",
 	"source":{
 		"icon":"{{pluginHost}}static/images/icon.png"
@@ -87,14 +87,14 @@
 		"lbOpen":{
 			"type":"switch",
 			"value":1,
-			"display":"启用服务",
+			"display":"{{LNG['officeViewer.meta.svcOpen']}}",
 			"desc":"{{LNG['officeViewer.libreOffice.desc']}}",
 			"switchItem":{"0":"","1":"lbSoffice,lbFileExt"}
 		},
 		"lbSoffice":{
 			"type":"input",
-			"value":"/opt/libreoffice7.5/program/soffice",
-			"attr":{"placeholder":"/opt/libreoffice7.5/program/soffice"},
+			// "value":"/opt/libreoffice7.5/program/soffice",
+			"value":"",
 			"display":"{{LNG['officeViewer.libreOffice.path']}}",
 			"desc":"{{LNG['officeViewer.libreOffice.pathDesc']}}"
 		},
@@ -108,7 +108,7 @@
 		"olOpen":{
 			"type":"switch",
 			"value":1,
-			"display":"启用服务",
+			"display":"{{LNG['officeViewer.meta.svcOpen']}}",
 			"desc":"{{LNG['officeViewer.officeLive.desc']}}",
 			"switchItem":{"0":"","1":"olApiServer,olFileExt"}
 		},
@@ -129,7 +129,7 @@
 		"yzOpen":{
 			"type":"switch",
 			"value":1,
-			"display":"启用服务",
+			"display":"{{LNG['officeViewer.meta.svcOpen']}}",
 			"desc":"{{LNG['officeViewer.yzOffice.desc']}}",
 			"switchItem":{"0":"","1":"yzFileExt"}
 		},
