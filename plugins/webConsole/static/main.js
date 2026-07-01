@@ -4,8 +4,9 @@ kodReady.push(function(){
 		listData['{{package.id}}'] = {
 			name:name,
 			url:'{{pluginHost}}lib/',
-			subMenu:'{{config.menuSubMenu}}',
 			target:'{{config.openWith}}',
+			subMenu:'{{config.menuSubMenu}}',
+			menuAdd:'{{config.menuAdd}}',
 			icon:'ri-terminal-box-fill bg-grey-10'
 		}
 	});

@@ -133,6 +133,9 @@ class fileThumbPlugin extends PluginBase{
 		$width = ($width && $width > 1000) ? 1200:250;
 		
 		$file = IO::info($path);
+		if (!$file || !$file['path'] || $file['isFolder']) {
+			echo 'Invalid file path: '.$path;exit;
+		}
 		$fileHash  = KodIO::hashPath($file);
 		$coverName = "cover_".$fileHash."_{$width}.png";
 		$result = $this->coverMake($this->cachePath,$file['path'],"cover_".$fileHash."_{$width}.png",$width);
