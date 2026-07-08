@@ -73,6 +73,8 @@ ClassBase.define({
 
     clientLink: function ($dialog) {
         var setLink = function (result) {
+            if (!result) result = {code:false};
+            if (!result.data) result.data = {};
             Events.trigger('client.down.dialog.loaded',$dialog,result);
             if (!result.code || !result.data) {
                 var html = '<div class="info-alert info-alert-yellow mt-50 size14">'+LNG['client.down.apiErr']+'</div>';

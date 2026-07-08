@@ -30,27 +30,22 @@ class oauthPlugin extends PluginBase{
 	 * @return void
 	 */
 	public function updateOption($options) {
-		$regist = Model('SystemOption')->get('regist');
-	    if (isset($regist['loginWith'])) {	// 只有定制插件默认安装时后台存在该参数（空），不存在时从插件配置中获取（安装时自动保存默认配置）
-	        $loginWith = _get($regist,'loginWith',array());
-	    } else {
-	        $config = $this->getConfig();
-	        $loginWith = explode(',', _get($config, 'loginWith', ''));
-	    }
-		// $config = $this->getConfig();
-		// // 插件配置中该参数是在后台保存时添加，如果不存在，从后台原数据中获取
-		// if (!isset($config['loginWith'])) {
-		// 	$regist = Model('SystemOption')->get('regist');
-		// 	if (!isset($regist['loginWith'])) {
-		// 		$loginWith = array('qq', 'weixin');	// 全新安装不含此参数，则赋默认值
-		// 	} else {
-		// 		$loginWith = _get($regist,'loginWith',array());
-		// 	}
-		// 	$this->setConfig(array('loginWith' => implode(',', $loginWith)));
-		// } else {
-		// 	$loginWith = explode(',', _get($config, 'loginWith', ''));
-		// }
-		$options['system']['options']['loginConfig']['loginWith'] = array_filter($loginWith);
+		// 只有（渠道）定制插件存在该值（安装时自动保存配置，一般默认为空），其他的从插件配置中获取
+		if (defined('INSTALL_CHANNEL') && INSTALL_CHANNEL) {
+			$regist	= Model('SystemOption')->get('regist');
+			$loginWith = _get($regist, 'loginWith', '');
+		} else {
+			$config = $this->getConfig();
+			if (isset($config['loginWith'])) {
+				$loginWith = _get($config, 'loginWith', '');
+			} else {
+				$loginWith = 'qq,weixin';	// 默认
+			}
+		}
+		$loginWith = is_array($loginWith) ? $loginWith : explode(',', $loginWith.'');
+		$loginWith = array_filter($loginWith);
+		// $options['system']['options']['loginWith'] = $loginWith;	// admin/set/get均已删除
+		$options['system']['options']['loginConfig']['loginWith'] = $loginWith;
 		return $options;
 	}
 
@@ -77,20 +72,27 @@ class oauthPlugin extends PluginBase{
 	 * 绑定相关操作请求
 	 * @return void
 	 */
-	public function bind() {
-		$method = Input::get('method', 'require');
+	public function bind($web=true) {
+		$this->checkRequest('POST');
+		$method = Input::get('method', 'require');	// oauth/bind/unbind/bindInfo/bindApi
 		$action = $this->action();
-		if (!method_exists($action, $method)) {
+		if (!method_exists($action, $method) || ($web && $method == 'bind')) {
 			show_json(LNG('common.invalidParam').'[method]', false);
 		}
-		return $action->$method();
+		if ($method == 'bindInfo') {
+			$type = '';
+		} else {
+			$type = Input::get('type','require');
+		}
+		return $action->$method($type);
 	}
 	/**
 	 * 兼容app相关调用
 	 * @param array $data
 	 * @return void
 	 */
-	public function bindHook($data=array()){
+	public function bindHook($data){
+		$this->checkRequest();
 		$act = strtolower(ACT);
 		$actions = array(
 			'bind' 			=> 'bind',
@@ -99,7 +101,7 @@ class oauthPlugin extends PluginBase{
 		);
 		if (isset($actions[$act])) {
 			$this->in['method'] = $actions[$act];
-			return $this->bind();
+			return $this->bind(false);
 		}
 		// app绑定第三方账号
 		if (isset($this->in['third']) && !empty($data)) {
@@ -125,5 +127,17 @@ class oauthPlugin extends PluginBase{
 	}
 	public function logList($data = array()){
 		return $this->action('log')->logList($data);
+	}
+
+	// 限定post请求
+	private function checkRequest($type='POST') {
+		if ($_SERVER['REQUEST_METHOD'] != 'POST') {
+			show_json(LNG('common.illegalRequest'), false);
+		}
+		if ($type == 'POST') return;
+		$device = Action('filter.userCheck')->getDevice();
+		if (!$device || $device['type'] != 'app') {
+			show_json(LNG('common.illegalRequest'), false);
+		}
 	}
 }

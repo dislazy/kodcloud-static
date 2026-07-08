@@ -44,8 +44,10 @@ class KodImagick {
     private function setTmpDir() {
         if(!is_dir(TEMP_FILES)){mk_dir(TEMP_FILES);}
         $path = TEMP_FILES . '/imagick'; mk_dir($path);
-        putenv('MAGICK_TEMPORARY_PATH='.$path);
-        putenv('MAGICK_TMPDIR='.$path);
+		if(function_exists('putenv')){
+			putenv('MAGICK_TEMPORARY_PATH='.$path);
+			putenv('MAGICK_TMPDIR='.$path);
+		}
     }
 
     // 设置Imagick内存限制——实际是ImageMagick在占用系统内存，不受PHP内存限制
@@ -63,15 +65,21 @@ class KodImagick {
 
     // 格式是否支持
     public function isSupport($ext) {
-        return in_array(strtolower($ext), $this->allFormats);
+        static $formats = null;
+        if ($formats === null) {
+            $imagick = new Imagick();
+            $formats = $imagick->queryFormats();
+            $imagick->destroy();
+        }
+        return in_array(strtoupper($ext), $formats);
     }
 
     /**
      * 图片生成缩略图
-     * @param [type] $file
-     * @param [type] $cacheFile
-     * @param [type] $maxSize
-     * @param [type] $ext
+     * @param string $file
+     * @param string $cacheFile
+     * @param int    $maxSize
+     * @param string $ext
      * @return void
      */
     public function createThumb($file, $cacheFile, $maxSize, $ext) {

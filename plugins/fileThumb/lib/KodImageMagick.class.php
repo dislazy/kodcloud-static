@@ -5,14 +5,59 @@
  */
 class KodImageMagick {
 	private $plugin;
-    private $command;
     public function __construct($plugin) {
         $this->plugin = $plugin;
     }
 
     // 格式是否支持
-    public function isSupport($ext) {
-        return true;
+    public function isSupport($ext, $type='convert') {
+        if ($type != 'convert') return true;	// ffmpeg不检查
+
+		$cckey = 'ImageMagick_support_formats';
+		$cache = Cache::get($cckey);
+		if (!$cache) {
+			$cache = $this->getImgFormats();
+			if (!$cache) return false;
+			$cache = Cache::set($cckey, $cache, 3600);
+		}
+		if (!is_array($cache)) return false;
+		return in_array(strtoupper($ext), $cache);
+    }
+
+	// 获取imagemagick支持的格式（r）
+	public function getImgFormats() {
+        $command = $this->getCommand();
+		if (!$command) return false;
+		$output = shell_exec($command.' -list format 2>&1');	// linux和macos下格式不同
+        if (!$output) return false;	// []
+
+        $formats = array();
+        $lines = explode("\n", trim($output));
+        foreach ($lines as $line) {
+            $line = trim($line);
+            // 跳过非数据行
+            if (empty($line) || 
+                strpos($line, 'Format') === 0 || 
+                strpos($line, '---') === 0 ||
+                strpos($line, '* native blob support') === 0) {
+                continue;
+            }
+
+            // 使用正则表达式匹配格式和模式
+            // 匹配模式: 格式名(可能带*号) 然后是任意字符 然后是3字符模式
+            if (preg_match('/^(\S+?)(\*?)(?:\s+\S+)*\s+([r\-][w\-][\+\-])/', $line, $matches)) {
+                $format = $matches[1];
+                $mode = $matches[3];
+                // 检查是否支持读取
+                if ($mode[0] === 'r') {
+                    $formats[] = rtrim($format, '*');
+                }
+            }
+        }
+        $formats = array_unique(array_filter($formats));
+        // sort($formats);
+
+        return $formats;
     }
 
     // 获取命令
@@ -22,10 +67,10 @@ class KodImageMagick {
 
     /**
      * 图片生成缩略图
-     * @param [type] $file
-     * @param [type] $cacheFile
-     * @param [type] $maxSize
-     * @param [type] $ext
+     * @param string $file
+     * @param string $cacheFile
+     * @param int 	 $maxSize
+     * @param string $ext
      * @return void
      */
 	// imagemagick  -density 100 //耗时间,暂时去除
@@ -105,21 +150,24 @@ class KodImageMagick {
 
         $tempPath = $this->getTmpPath($cacheFile, $tempName);
 		$this->setLctype($file,$tempPath);
+		$this->setTmpDir();
 
 		$script = $command.' '.$param.' '.escapeShell($file).' '.escapeShell($tempPath).' 2>&1';
 		$script = "export MAGICK_THREAD_LIMIT=2; {$script}";	// 限制进程数
 		$out = shell_exec($script);
 
-		if(!file_exists($tempPath)) return $this->log('image thumb error:'.$out.';cmd='.$script);
+		if(!file_exists($tempPath)) {
+			return $this->log('image thumb error:'.$out.';cmd='.$script);
+		}
 		move_path($tempPath,$cacheFile);
 		return true;
     }
 
     /**
      * 使用ffmpeg生成视频封面
-     * @param [type] $file
-     * @param [type] $cacheFile
-     * @param [type] $videoThumbTime
+     * @param string $file
+     * @param string $cacheFile
+     * @param string $videoThumbTime
      * @return void
      */
     public function createThumbVideo($file,$cacheFile,$videoThumbTime){
@@ -183,9 +231,17 @@ class KodImageMagick {
         return $tempPath;
     }
 
+	// 设置Imagick临时目录
+    private function setTmpDir() {
+        if(!is_dir(TEMP_FILES)){mk_dir(TEMP_FILES);}
+        $path = TEMP_FILES . '/imagemagick'; mk_dir($path);
+		if(function_exists('putenv')){
+			putenv('MAGICK_TEMPORARY_PATH='.$path);
+        	putenv('MAGICK_TMPDIR='.$path);
+		}
+    }
     // 记录日志
     public function log($msg) {
         $this->plugin->log($msg);
-    }
-    
+    }    
 }
