@@ -1,5 +1,6 @@
 <?php 
 class clientTfaIndex extends Controller {
+    public $pluginName;
 	public function __construct() {
 		parent::__construct();
 		$this->pluginName = 'clientPlugin';
@@ -41,7 +42,7 @@ class clientTfaIndex extends Controller {
         return $issso;
     }
 
-    // 登录成功后（尚未更新登录状态）
+    // 登录成功后（尚未更新登录状态），获取验证方式
     public function loginAfter($user) {
         $tfaOpen = Model('SystemOption')->get('tfaOpen');
         if ($tfaOpen != '1') return;
@@ -56,6 +57,7 @@ class clientTfaIndex extends Controller {
             return;
         }
 
+        // 获取多重验证方式
 		$tfaInfo = $this->getTfaInfo($user);
         if (!$tfaInfo['tfaOpen']) return;
 
@@ -67,6 +69,12 @@ class clientTfaIndex extends Controller {
 
     // 入口方法
     public function index(){
+        // 验证器请求事件
+        $type = Input::get('type','require');
+        if ($type == 'totp') {
+            $this->totpAct()->index();
+        }
+        // 默认请求事件：发送、验证验证码
         $check  = array('tfaCode','tfaVerify');
         $func   = Input::get('action','in',null,$check);
 
@@ -82,10 +90,11 @@ class clientTfaIndex extends Controller {
 
     /**
      * 获取用户多重验证信息
+     * @param array $user
      */
     public function getTfaInfo($user){
-        $tfaOpen = Model('SystemOption')->get('tfaOpen');
-        $tfaType = Model('SystemOption')->get('tfaType');
+        $tfaOpen = Model('SystemOption')->get('tfaOpen');   // 开启
+        $tfaType = Model('SystemOption')->get('tfaType');   // 方式：phone,email,...
         $data = array(
             // 'userID'    => $user['userID'],
             'tfaOpen'   => intval($tfaOpen),
@@ -94,25 +103,37 @@ class clientTfaIndex extends Controller {
             $data['tfaOpen'] = 0;
             return $data;
         }
-        // 发送类型，优先使用手机
-		$type = $input = '';
-		$typeArr = explode(',',$tfaType);
-        $typeArr = array_intersect(array('phone','email'), $typeArr);
-		foreach ($typeArr as $tType) {
-            $value = _get($user, $tType, '');
+        $typeArr = explode(',',$tfaType);
+
+        // 获取已绑定的发送类型
+        $data = array();
+        // 手机号/邮箱
+        foreach (array('phone', 'email') as $type) {
+            if (!in_array($type, $typeArr)) continue;
+            $value = _get($user, $type, '');
             if (!$value) continue;
-			if (Input::check($value, $tType)) {
-				$type   = $tType;
-				$input  = $value;
-				break;
+            if (Input::check($value, $type)) {
+				$data[$type] = $this->getMscValue($value,$type);
 			}
-		}
-        $tfaInfo = array(
-            'tfaType'   => implode(',',$typeArr),
-            'type'      => $type,
-            'input'     => $this->getMscValue($input,$type)
+        }
+        // google、微软动态验证码
+        $type = 'totp';
+        if (in_array($type, $typeArr)) {
+            $value = $this->totpAct()->getBindInfo($user);    // secret
+            if ($value) {
+                $data[$type] = $this->getMscValue($value,$type);
+            }
+        }
+
+        // 有绑定则只显示绑定项，否则显示全部（前端绑定）
+        if (!empty($data)) {
+            $typeArr = array_keys($data);
+        }
+        return array(
+            'tfaOpen' => 1,
+            'tfaType' => implode(',',$typeArr),
+            'tfaList' => $data
         );
-        return array_merge($data, $tfaInfo);
 	}
 
     // 获取手机/邮箱（加*）
@@ -125,7 +146,7 @@ class clientTfaIndex extends Controller {
                 $slenList = array(1=>0,2=>1,3=>2);
                 $slen = $slenList[$epos];
             }
-            $elen = strlen($value) - $epos - 1;
+            $elen = strlen($value) - $epos;
         }
         $rpls = substr($value, $slen, strlen($value) - $slen - $elen);
         $rpld = str_repeat('*', strlen($rpls));
@@ -134,6 +155,7 @@ class clientTfaIndex extends Controller {
 
     /**
      * 发送验证码
+     * @param array $user
      */
     public function tfaCode($user) {
         $data = $this->checkCode($user);
@@ -151,7 +173,7 @@ class clientTfaIndex extends Controller {
         // if($data['userID'] != $user['userID']) {
         //     show_json(LNG('client.tfa.userLgErr'), false);
         // }
-		if($user[$type]){$input = $user[$type];}
+		if($user[$type]){$input = $user[$type];}    // 有值（已绑定）时直接将*值替换
         if(!Input::check($input,$type)) {
             show_json(LNG('client.tfa.sendInvalid'), false);
         }
@@ -194,7 +216,7 @@ class clientTfaIndex extends Controller {
 
     /**
 	 * 证码存储、验证
-	 * @param [type] $code
+	 * @param string $code
 	 * @param array $data
 	 * @param boolean $set
 	 * @return void
@@ -235,17 +257,37 @@ class clientTfaIndex extends Controller {
 
     /**
      * 提交验证码
+     * @param array $user
      */
     public function tfaVerify($user) {
         // 验证码验证
-        $data = $this->checkCode($user);
-        $code = Input::get('code', 'require');
-        $this->checkMsgCode($code, $data);
-        // 绑定联系方式
-        if($user[$data['type']] != $data['input']) {
-            $update = array($data['type'] => $data['input']);
-            $res = Model('User')->userEdit($user['userID'], $update);
-            $user[$data['type']] = $data['input'];
+        $type = Input::get('type');
+        if ($type == 'totp') { // 验证器单独处理
+            $input = Input::get('input', 'require');
+            $code = Input::get('code', 'require');
+            // 获取绑定信息
+            $secret = $this->totpAct()->getBindInfo($user);
+            if (!$secret) {
+                $secret = $input;
+            }
+            // 检查验证码
+            if (!$this->totpAct()->verifyCode($secret, $code)) {
+                show_json(LNG('user.codeError'), false);
+            }
+            // 绑定更新；二者相等，说明input为完整值（初始化值），需要绑定
+            if ($input == $secret) {
+                $this->totpAct()->setBindInfo($user, $secret);
+            }
+        } else {
+            $data = $this->checkCode($user);
+            $code = Input::get('code', 'require');
+            $this->checkMsgCode($code, $data);
+            // 绑定联系方式
+            if($user[$data['type']] != $data['input']) {
+                $update = array($data['type'] => $data['input']);
+                $res = Model('User')->userEdit($user['userID'], $update);
+                $user[$data['type']] = $data['input'];
+            }
         }
         // 删除用户缓存
         $tfaKey = Input::get('sign');
@@ -254,6 +296,10 @@ class clientTfaIndex extends Controller {
         $user['tfaVerified'] = true;
         Action("user.index")->loginSuccessUpdate($user);
         show_json(LNG('common.loginSuccess'));
+    }
+
+    public function totpAct(){
+        return Action($this->pluginName . '.tfa.totp');
     }
 
 }

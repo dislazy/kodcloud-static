@@ -166,7 +166,7 @@ class NtcEvnt {
             array(
                 'event'     => self::EVNT_SVR_DISK_SIZE_ERR,
                 'title'     => LNG('NTC_EVNT_SVR_DISK_SIZE_ERR'),
-                'level'     => self::EVNT_LEVEL_3,
+                'level'     => self::EVNT_LEVEL_4,
                 'class'     => self::EVNT_CLASS_SVR,
                 'desc'      => LNG('NTC_EVNT_SVR_DISK_SIZE_ERR_DESC'),
                 'message'   => LNG('msgWarning.svr.diskSizeErr'),
@@ -183,7 +183,7 @@ class NtcEvnt {
                     ),
                 ),
                 'notice'    => array(
-                    'method'    => 'ktips',
+                    'method'    => 'kwarn,email',
                     'target'    => '{"user":[1]}',
                     // 'cntMax' => 0,
                     'cntMaxDay' => 0,
@@ -312,7 +312,7 @@ class NtcEvnt {
             array(
                 'event'     => self::EVNT_SYS_STORE_SIZE_ERR,
                 'title'     => LNG('NTC_EVNT_SYS_STORE_SIZE_ERR'),
-                'level'     => self::EVNT_LEVEL_3,
+                'level'     => self::EVNT_LEVEL_4,
                 'class'     => self::EVNT_CLASS_SYS,
                 'desc'      => LNG('NTC_EVNT_SYS_STORE_SIZE_ERR_DESC'),
                 'message'   => LNG('msgWarning.sys.storeSizeErr'),
@@ -329,7 +329,7 @@ class NtcEvnt {
                     ),
                 ),
                 'notice'    => array(
-                    'method'    => 'ktips',
+                    'method'    => 'kwarn,email',
                     'target'    => '{"user":[1]}',
                     // 'cntMax' => 0,
                     'cntMaxDay' => 1,
@@ -392,7 +392,7 @@ class NtcEvnt {
                 'system'    => 1,
                 'status'    => 1,
                 'notice'    => array(
-                    'method'    => 'ktips',
+                    'method'    => 'kwarn',
                     'target'    => '{"user":[1]}',
                     // 'cntMax' => 0,
                     'cntMaxDay' => 0,

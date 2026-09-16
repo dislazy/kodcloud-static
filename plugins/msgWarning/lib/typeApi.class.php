@@ -56,10 +56,11 @@ class typeApi {
 				break;
 			case 'weixin':
 			case 'dding':
+			case 'feishu':
 				$this->check3rdMsg($type, $item);
                 if ($item['data'] == '1') {
                     $list = $this->getAppConfig('ntcTypeList', array());
-                    $item['status'] = intval($list[$type]);
+                    $item['status'] = intval(_get($list, $type, 0));
                 }
 				break;
 			default: break;
@@ -85,9 +86,12 @@ class typeApi {
 	// 检查短信；后续考虑增加自定义模板以适应自定义通知事件
 	private function checkSms(&$item){
 		if (Model('SystemOption')->get('versionType') == 'A') return;
-		$item['status'] = 1; // 默认启用
 		$plugin = Model('Plugin')->loadList('smsGateway');
-		if (!$plugin || $plugin['status'] != '1') return;
+		if (!$plugin || $plugin['status'] != '1') {
+			$item['status'] = 0;
+			$item['data'] = 0;
+			return;
+		}
 
 		$data = array('aliSecretId', 'aliSecretKey', 'aliSignName', 'aliTplCode', 'length');
 		if (_get($plugin, 'config.type', 'ali') == 'tx') {
@@ -100,6 +104,7 @@ class typeApi {
 			}
 		}
 		$item['data'] = $stat;
+		$item['status'] = $stat ? 1 : 0;
 	}
 
 	// 检查第三方同步消息（钉钉、企业微信）；依赖msgGateway插件，后续可以整合到此（同时调整调用处）
@@ -110,8 +115,9 @@ class typeApi {
 
 		if (_get($plugin, 'config.isOpen', 0) != '1') return;
 		$appList = array(
-			'weixin'=> 'weChat',
-			'dding'	=> 'dingTalk', 
+			'weixin' => 'weChat',
+			'dding'	 => 'dingTalk', 
+			'feishu' => 'feishu',
 		);
 		if (_get($plugin, 'config.type') != $appList[$type]) return;
 		$item['data'] = 1;
@@ -123,7 +129,7 @@ class typeApi {
 	 * @return void
 	 */
 	public function action ($req) {
-		$action = $req['action'];
+		$action = _get($req, 'action', '');
 		switch ($action) {
 			case 'getConfig':
 				$this->getConfig($req);
@@ -141,7 +147,7 @@ class typeApi {
 	 * @return void
 	 */
 	public function getConfig($req) {
-		if ($req['type'] != 'email') {
+		if (_get($req, 'type', '') != 'email') {
             show_json(LNG('explorer.share.errorParam'), false);
         }
 		$emailType = Model('systemOption')->get('emailType');
@@ -156,9 +162,9 @@ class typeApi {
 	 * @return void
 	 */
 	public function setConfig($req) {
-        $type = $req['type'];
-        $data = json_decode($req['data'],true);
-        if (!in_array($type, array('sms','email','weixin','dding')) || empty($data)) {
+        $type = _get($req, 'type', '');
+        $data = json_decode(_get($req, 'data', ''),true);
+        if (!in_array($type, array('sms','email','weixin','dding','feishu')) || empty($data)) {
             show_json(LNG('explorer.share.errorParam'), false);
         }
 		// 邮件、短信
@@ -169,12 +175,12 @@ class typeApi {
 			Model('systemOption')->set('email', $data);
 			show_json(LNG('explorer.success'));
 		}
-		// 企业微信、钉钉
+		// 企业微信、钉钉、飞书
 		$status = intval($data['status']);
 		$item = array('status'=>$status);
 		if ($status === 1) {
 			$this->check3rdMsg($type, $item);
-			if ($item['data'] != 1) {
+			if (_get($item, 'data', 0) != 1) {
 				show_json(LNG('msgWarning.type.setAppFirst'), false);
 			}
 		}

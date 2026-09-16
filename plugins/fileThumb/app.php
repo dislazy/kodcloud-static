@@ -146,11 +146,12 @@ class fileThumbPlugin extends PluginBase{
 		
 		$file = IO::info($path);
 		if (!$file || !$file['path'] || $file['isFolder']) {
+			http_response_code(404);
 			echo 'Invalid file path: '.$path;exit;
 		}
 		$fileHash  = KodIO::hashPath($file);
 		$coverName = "cover_".$fileHash."_{$width}.png";
-		$result = $this->coverMake($this->cachePath,$file['path'],"cover_".$fileHash."_{$width}.png",$width);
+		$result = $this->coverMake($this->cachePath,$file['path'],$coverName,$width);
 		if($width == 1200){$this->coverMake($this->cachePath,$file['path'],"cover_".$fileHash."_250.png",250);}
 		$sourceID = IO::fileNameExist($this->cachePath,$coverName);
 		// pr(IO::Info(kodIO::make($sourceID)));exit;
@@ -159,7 +160,8 @@ class fileThumbPlugin extends PluginBase{
 		if(in_array($file['ext'], $this->webExts)) {
 			IO::fileOut($path);exit;
 		}
-		echo $result;
+		http_response_code(404);
+		echo $result;exit;
 	}
 
 	/**
@@ -231,7 +233,15 @@ class fileThumbPlugin extends PluginBase{
 	public function coverMake($cachePath,$path,$coverName,$size){
 		$cckey = md5('fileThumb.convert.'.$path.$coverName.$size);
 		if (Cache::get($cckey)) return;
-		Cache::set($cckey, 1, 60);	// 延迟1分钟，避免重复执行（对未生成的图片预览大图时，会执行3次250x250）
+		// 用短锁关闭 check-then-set 的竞态窗口，避免多进程/队列同时进入下载与转换
+		$lockKey = 'fileThumb.coverMake:'.$cckey;
+		CacheLock::lock($lockKey);
+		$isRunning = Cache::get($cckey);
+		if (!$isRunning) {
+			Cache::set($cckey, 1, 60);	// 延迟1分钟，避免重复执行（对未生成的图片预览大图时，会执行3次250x250）
+		}
+		CacheLock::unlock($lockKey);
+		if ($isRunning) return;
 		if(IO::fileNameExist($cachePath,$coverName)){return 'exists;';}
 		if(!is_dir(TEMP_FILES)){mk_dir(TEMP_FILES);}
 
@@ -337,7 +347,10 @@ class fileThumbPlugin extends PluginBase{
 	// s3系对象存储，通过imaginary用文件url生成缩略图
 	private function localImg2Url($path,$ext){
 		if (request_url_safe($path)) return false;
-		if (!in_array($this->ioFileInfo['ioDriver'], array('s3','eds','eos','minio','oos'))) return false;
+		$driver = _get($this->ioFileInfo,'ioDriver','');
+		if (!$driver || !in_array($driver, array('s3','eds','eos','minio','oos'))) {
+			return false;
+		}
 		// 是否支持imaginary
 		$api = $this->getImgnryApi($ext);
 		if (!$api) return false;
@@ -408,15 +421,16 @@ class fileThumbPlugin extends PluginBase{
 
 	// 缩略图：图片
 	private function thumbImage($file,$cacheFile,$maxSize,$ext){
-		// 1.使用imaginary接口
-		$api = $this->getImgnryApi($ext);
-		if ($api) return $api->createThumb($file,$cacheFile,$maxSize,$ext);
-		// 检查图片大小，提前拦截——imagick执行过程中不受PHP内存限制，也拦截
+		// 检查图片大小，提前拦截——imagick执行过程中不受PHP内存限制，也拦截；追加：imaginary也拦截
 		$isImg = false;
 		if (in_array($ext, $this->imgExts)) {
 			$isImg = true;
 			if (!$this->thumbSizeLimit($file)) return;
 		}
+
+		// 1.使用imaginary接口
+		$api = $this->getImgnryApi($ext);
+		if ($api) return $api->createThumb($file,$cacheFile,$maxSize,$ext);
 
 		// 2.使用imagick扩展
 		$api = $this->getImgickApi($ext);
@@ -562,7 +576,7 @@ class fileThumbPlugin extends PluginBase{
 			return false;
 		}
 		$result = shell_exec($bin.' --help');
-		if (stripos($result,$check) > 0) return true;
+		if (stripos($result,$check) !== false) return true;
 		
 		$out = shell_exec($bin.' --help 2>&1');
 		$this->log('imagick env error:'.$out.';cmd='.$bin.' --help 2>&1');
@@ -739,8 +753,16 @@ class fileThumbPlugin extends PluginBase{
 	}
 	// 获取Imaginry服务状态
 	private function isImgnryRunning(){
+		if (defined('KOD_FROM_WEBDAV')) return false;	// webdav载入目录直接返回false
 		static $status = null;
 		if (is_null($status)) {
+			// 缓存命中则直接返回，避免每次目录列表都请求 /health —— 仅缓存成功状态
+			$cckey = 'fileThumb.imgnryRunning';
+			$cache = Cache::get($cckey);
+			if ($cache === 1) {
+				$status = 1;
+				return $status;
+			}
 			$code = 0;
 			$config = $this->getConfig();
 			if (intval($config['imgnryOpen']) === 1) {
@@ -748,6 +770,7 @@ class fileThumbPlugin extends PluginBase{
 				$code = $rest ? 1 : 0;
 			}
 			$status = $code;
+			if ($code) {Cache::set($cckey, $code, 60);}
 		}
 		return $status;
 	}

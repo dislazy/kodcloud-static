@@ -3,6 +3,7 @@
  * 通知事件——运维管理类
  */
 class msgWarningMsgOps extends Controller {
+	protected $pluginName;
 	public function __construct() {
 		parent::__construct();
 		$this->pluginName = 'msgWarningPlugin';

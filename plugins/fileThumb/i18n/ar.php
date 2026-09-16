@@ -34,6 +34,8 @@ return array(
     "fileThumb.config.igryApiKeyDesc" => "مفتاح API (-key)",
     "fileThumb.config.igryUrlKey"    => "مفتاح URL",
     "fileThumb.config.igryUrlKeyDesc" => "مفتاح توقيع عنوان URL (-url-signature-key)، 32 حرفًا على الأقل",
+    "fileThumb.config.igryConc"      => "تجهيز عدد المتزامنة",
+    "fileThumb.config.igryConcDesc"  => "عدد الطلبات المتزامنة",
     "fileThumb.config.igryNotMust"   => "غير ضروري",
     "fileThumb.check.title"          => "كشف الخدمة",
     "fileThumb.check.ing"            => "الاختبارات البيئية",

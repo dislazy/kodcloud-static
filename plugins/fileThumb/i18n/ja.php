@@ -34,6 +34,8 @@ return array(
     "fileThumb.config.igryApiKeyDesc" => "APIキー（-key）",
     "fileThumb.config.igryUrlKey"    => "URLキー",
     "fileThumb.config.igryUrlKeyDesc" => "URL署名キー（-url-signature-key）、少なくとも32文字",
+    "fileThumb.config.igryConc"      => "同時処理数",
+    "fileThumb.config.igryConcDesc"  => "要求コンカレント数（-concurrency）",
     "fileThumb.config.igryNotMust"   => "不要",
     "fileThumb.check.title"          => "サービス検出",
     "fileThumb.check.ing"            => "環境試験",

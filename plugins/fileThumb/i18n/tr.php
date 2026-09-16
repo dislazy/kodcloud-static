@@ -34,6 +34,8 @@ return array(
     "fileThumb.config.igryApiKeyDesc" => "API anahtarı (-anahtar)",
     "fileThumb.config.igryUrlKey"    => "URL Anahtarı",
     "fileThumb.config.igryUrlKeyDesc" => "URL imzalama anahtarı (-url-signature-key), en az 32 karakter",
+    "fileThumb.config.igryConc"      => "Eşzamanlı sayıları işlemek",
+    "fileThumb.config.igryConcDesc"  => "Eşzamanlık İsteği (-concurrency)",
     "fileThumb.config.igryNotMust"   => "Önemsiz",
     "fileThumb.check.title"          => "Hizmet tespiti",
     "fileThumb.check.ing"            => "Çevresel test",

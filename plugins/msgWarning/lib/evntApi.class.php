@@ -27,22 +27,22 @@ class evntApi {
 	public function initData() {
 		$list = NtcEvnt::listData();
 		$data = $this->getAppConfig('ntcEvntList', array());
+		if (!is_array($data)) $data = array();
 		$update = array();
 		foreach ($list as $item) {
 		    $event = $item['event'];
-			if (isset($data[$event])) continue;
-			if (!$item['policy']) $item['policy'] = array();
+			$item['policy'] = _get($item, 'policy', array());
+			if (!is_array($item['policy'])) $item['policy'] = array();
 
 			$policy = array();
 			foreach ($item['policy'] as $key => $value) {
 				if (!isset($value['value'])) continue;
 				$policy[$key] = $value['value'];
 			}
-			$update[$event] = array(
-				// 'type'	 => $item['type'],	// 通知方式
-				'status' => $item['status'],// 事件状态
+			$default = array(
+				'status' => _get($item, 'status', 0),// 事件状态
 				'policy' => $policy,		// 通知策略
-				'notice' => $item['notice'],// 通知设置
+				'notice' => _get($item, 'notice', array()),// 通知设置
 				'result' => array(
 					'cntToday'	=> 0,
 					'cntTotal'	=> 0,
@@ -50,6 +50,23 @@ class evntApi {
 					'tskTime'	=> 0, 
 				), // 通知结果
 			);
+			// 事件不存在则写入完整默认值；已存在但缺字段时补齐，避免旧版本数据不完整
+			if (!isset($data[$event])) {
+				$update[$event] = $default;
+				continue;
+			}
+			$dbItem = $data[$event];
+			$changed = false;
+			if (!is_array($dbItem)) {
+				$dbItem = array();
+				$changed = true;
+			}
+			foreach ($default as $key => $value) {
+				if (array_key_exists($key, $dbItem)) continue;
+				$dbItem[$key] = $value;
+				$changed = true;
+			}
+			if ($changed) $update[$event] = $dbItem;
 		}
 		if (!empty($update)) {
 			$this->setAppConfig(array('ntcEvntList' => array_merge($data, $update)));
@@ -64,7 +81,9 @@ class evntApi {
 		$list = $this->get(array(), true);
 		foreach ($list as &$item) {
 			$policy = array();
-			foreach ($item['policy'] as $key => $val) {
+			$itemPolicy = _get($item, 'policy', array());
+			if (!is_array($itemPolicy)) $itemPolicy = array();
+			foreach ($itemPolicy as $key => $val) {
 				if (!$val || !isset($val['value'])) continue;
 				$policy[$key] = $val['value'];
 			}
@@ -86,10 +105,10 @@ class evntApi {
 
 		// 筛选条件
 		$where = array();
-		if ($req['class'] && $req['class'] != 'all') {
+		if (isset($req['class']) && $req['class'] && $req['class'] != 'all') {
 			$where['class'] = $req['class'];
 		}
-		if ($req['level'] && $req['level'] != 'all') {
+		if (isset($req['level']) && $req['level'] && $req['level'] != 'all') {
 			$where['level'] = intval(str_replace('level','',$req['level']));
 		}
 		if (isset($req['status']) && $req['status'] != 'all') {
@@ -98,16 +117,21 @@ class evntApi {
 
 		// 查询详情，覆盖更新
 		$data = $this->getAppConfig('ntcEvntList', array());
+		if (!is_array($data)) $data = array();
 		$update = array();
 		foreach ($list as $i => &$item) {
 			$event = $item['event'];
 			// 赋值
 			$dbopt = _get($data, $event, array());
-			foreach ($dbopt['policy'] as $key => $value) {
+			$dbPolicy = _get($dbopt, 'policy', array());
+			if (!is_array($dbPolicy)) $dbPolicy = array();
+			foreach ($dbPolicy as $key => $value) {
 				if (!isset($item['policy'][$key])) continue;
 				$item['policy'][$key]['value'] = $value;
 			}
-			foreach ($dbopt['notice'] as $key => $value) {
+			$dbNotice = _get($dbopt, 'notice', array());
+			if (!is_array($dbNotice)) $dbNotice = array();
+			foreach ($dbNotice as $key => $value) {
 				if (!isset($item['notice'][$key])) continue;
 				$item['notice'][$key] = $value;
 			}
@@ -189,7 +213,7 @@ class evntApi {
 	 * @return void
 	 */
 	public function action ($req) {
-		$action = $req['action'];
+		$action = _get($req, 'action', '');
 		switch ($action) {
 			case 'getConfig':
 				$this->getConfig($req);
@@ -217,9 +241,11 @@ class evntApi {
 	 * @return void
 	 */
 	public function setConfig($req, $ret=false) {
-		$event = $req['event'];
+		$event = _get($req, 'event', '');
+		if ($event === '') show_json(LNG('explorer.share.errorParam'), false);
 		$data = _get($req, 'data', array());
         if (!is_array($data)) $data = json_decode($data,true);
+		if (!is_array($data)) show_json(LNG('explorer.share.errorParam'), false);
 
 		// 前端提交且为详情保存，检查参数——启/禁用不处理
 		if (!$ret && isset($data['notice'])) {
@@ -235,15 +261,33 @@ class evntApi {
 				show_json(sprintf(LNG('msgWarning.evnt.freqLsTimeErr'), $taskFreq), false);
 			}
 		}
+		// 系统默认事件且等级为预警级以上，不允许后端关闭
+		if (!$ret && isset($data['status']) && !$data['status']) {
+			$info = $this->getRawList($event);
+			if ($info && $info['system'] == '1' && intval($info['level']) >= 3) {
+				show_json(LNG('explorer.share.errorParam'), false);
+			}
+		}
 
-		// 获取列表，覆盖对应项
-		$list = $this->getAppConfig('ntcEvntList', array());
-		if (!isset($list[$event])) $list[$event] = array();
-		// // TODO 启用状态会被覆盖，可能来自计划任务，待确认
-		// write_log(array('更新evnt---',$req, $list[$event],get_caller_info()), 'msgwarning');
-        $list[$event] = array_merge($list[$event], $data);
-		// write_log(array('更新evnt2---',$req, $list[$event]), 'msgwarning');
-        $this->setAppConfig(array('ntcEvntList'=>$list));
+		// 获取列表，覆盖对应项——加锁，否则并发时可能相互覆盖
+		$lockKey = 'msgWarning.ntcEvntList.write';
+		CacheLock::lock($lockKey);
+		$throwErr = null;
+		try {
+			// 获取列表，覆盖对应项
+			$list = $this->getAppConfig('ntcEvntList', array());
+			if (!is_array($list)) $list = array();
+			if (!isset($list[$event]) || !is_array($list[$event])) $list[$event] = array();
+			$list[$event] = array_merge($list[$event], $data);
+			$this->setAppConfig(array('ntcEvntList'=>$list));
+		} catch (Exception $e) {$throwErr = $e;}
+		CacheLock::unlock($lockKey);
+		if ($throwErr !== null) throw $throwErr;
+
+		// 停用“文件异常下载”事件时，同步解除当日下载限制缓存
+		if (!$ret && $event == 'dataFileDownErr' && isset($data['status']) && !$data['status']) {
+			Cache::remove($this->pluginName.'.dataFileDownErr.'.date('Ymd'));
+		}
 		if ($ret) return true;
 		show_json(LNG('explorer.success'), true);
 	}
@@ -256,7 +300,7 @@ class evntApi {
 	public function getRawData($req, $ret=false) {
 		$list = $this->getRawList();
 		foreach ($list as &$item) {
-			$item = $item['notice']['method'];
+			$item = _get($item, 'notice.method', '');
 		};unset($item);
 		show_json($list);
 	}
@@ -266,6 +310,6 @@ class evntApi {
 		foreach ($list as $item) {
 		    $data[$item['event']] = $item;
 		}
-		return $event ? $data[$event] : $data;
+		return $event ? _get($data, $event, array()) : $data;
 	}
 }

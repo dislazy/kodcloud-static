@@ -34,6 +34,8 @@ return array(
     "fileThumb.config.igryApiKeyDesc" => "Clé API (-key)",
     "fileThumb.config.igryUrlKey"    => "Clé URL",
     "fileThumb.config.igryUrlKeyDesc" => "Clé de signature d'URL (-url-signature-key), au moins 32 caractères",
+    "fileThumb.config.igryConc"      => "Traiter le nombre de concurrences",
+    "fileThumb.config.igryConcDesc"  => "Nombre de demandes simultanées (- Concurrency)",
     "fileThumb.config.igryNotMust"   => "Non essentiel",
     "fileThumb.check.title"          => "Détection de service",
     "fileThumb.check.ing"            => "Essais environnementaux",

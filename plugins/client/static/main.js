@@ -330,7 +330,7 @@ kodReady.push(function(){
 			"value":_.get(G,'system.options.tfaType') || "",
 			"display":LNG['client.tfa.tfaType'],
 			"desc":LNG['client.tfa.tfaTypeDesc'],
-			"info":{"email":LNG['client.tfa.email'],"phone":LNG['common.phoneNumber']}
+			"info":{"email":LNG['client.tfa.email'],"phone":LNG['common.sms'],"totp":LNG['client.tfa.totp']}
 		};
 	});
 	// 移动追加项位置
@@ -362,19 +362,30 @@ kodReady.push(function(){
 		}
 		tfaInfo = result.data;
 	});
+	// 个人中心，追加二次验证设置
+	Events.bind('user.account.initViewAfter', function(self){
+		if(G.system.options.tfaOpen != '1') return;
+		var tfaType = G.system.options.tfaType || '';
+		if(!_.includes(tfaType.split(','), 'totp')) return;
+
+		requireAsync(staticPath + 'tfa/user.js' + version, function(UserTfa){
+			new UserTfa({parent: self});
+		});
+	});
 
 	if($.hasKey('plugin.client.event')) return;
 	// 客户端下载；js文件为异步加载，hook不能放在js文件中调用
 	var clientDown = null;
 	var clientDownload = function(_this, type){
-		var data = {parent:_this, pluginApi: "{{pluginApi}}", type: type};
-		if (clientDown) return clientDown.bindEvent(data);
+		var data = {parent:_this, type: type};
+		if (clientDown) return clientDown.initView(data);
 		requireAsync([
-			staticPath+'down/index.js',
-			staticPath+'down/index.css',
-		],function(Down){
-			clientDown = new Down({parent:self});
-			clientDown.bindEvent(data);
+			staticPath+'down/index.js'+version,
+			staticPath+'down/index.html'+version,
+			staticPath+'down/index.css'+version,
+		],function(DownView, dgTpl){
+			clientDown = new DownView({parent:_this, dgTpl: dgTpl});
+			clientDown.initView(data);
 		});
 	}
 	// 左下角菜单

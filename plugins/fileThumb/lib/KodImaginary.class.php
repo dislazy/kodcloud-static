@@ -25,6 +25,7 @@ class KodImaginary {
     private $apiUrl;
     private $apiKey;
     private $urlKey;
+    private $concurrency;
     private $defQuality = 85;
     private $defFormat = 'jpeg';    // jpg不支持；png支持，但大小为jpeg的10+倍
     private $image;
@@ -39,12 +40,13 @@ class KodImaginary {
         $this->apiUrl = rtrim($config['imgnryHost'], '/');
         $this->apiKey = $config['imgnryApiKey']; // -key
         $this->urlKey = $config['imgnryUrlKey']; // -url-signature-key
+        $this->concurrency = intval(_get($config,'imgnryConc',10)); // -concurrency
     }
 
     // 检查服务状态
     public function status(){
         // $this->initData();  // 刷新配置参数
-        $rest = $this->imgRequest('/health', array());
+        $rest = $this->imgRequest('/health', array(), array(), '', 5);
         return $rest ? true : false;
     }
 
@@ -130,7 +132,7 @@ class KodImaginary {
      * @param boolean $post
      * @return array
      */
-    private function imgRequest($path, $data, $post=array(), $ext='') {
+    private function imgRequest($path, $data, $post=array(), $ext='', $timeout=3600) {
         $this->checkRateLimit(); // 并发限制
 
         // key必须作为url参数传递，否则报错：Invalid or missing API key
@@ -146,7 +148,7 @@ class KodImaginary {
         $query = http_build_query($data);
         $query = $this->signUrl($path, $query);
         $url = $this->apiUrl . $path . '?' . $query;
-        $rest = url_request($url, $method, $post);
+        $rest = url_request($url, $method, $post, false, false, false, $timeout);
         // pr($url,$rest,$ext,$post);exit;
         if(!$rest || !isset($rest['data'])){
 			$this->log("imaginary {$path} error: [{$this->image}] request failed");
@@ -166,15 +168,73 @@ class KodImaginary {
         return $data ? $data : $rest['data'];
     }
 
-    // 并发限制（默认配置10），仅对队列有效（同一进程）
+    // 并发限制：跨进程滑动窗口 N req/s（对应 imaginary -concurrency）
+    // 队列独立进程 + 前端同步请求（cover()）均共享此限制
     private function checkRateLimit(){
-        static $lastCall = 0;
-        $minInterval = 0.2; // 200ms → 5 req/s
-        $now = timeFloat();
-        if ($now - $lastCall < $minInterval) {
-            usleep(intval(($minInterval - ($now - $lastCall)) * 1000000));
+        $maxRate   = $this->concurrency > 0 ? $this->concurrency : 10;   // 每秒最大请求数
+        $windowSec = 1.0;       // 滑动窗口长度
+        $key       = 'imgnry:rate:slots';
+        $lockKey   = $key.':lock';
+        $maxRetry  = 60;        // 最多重试 60 次（约 60s），避免 cache 异常导致死循环
+
+        for ($retry = 0; $retry < $maxRetry; $retry++) {
+            $unlocked = false;
+            $oldest   = 0;
+            $now      = 0;
+            try {
+                CacheLock::lock($lockKey);
+                $now   = timeFloat();
+                $slots = Cache::get($key);
+                $slots = is_array($slots) ? $slots : array();
+                // 清理过期时间戳
+                $slots = array_values(array_filter($slots, function($t) use ($now, $windowSec) {
+                    return ($now - $t) < $windowSec;
+                }));
+                if (count($slots) < $maxRate) {
+                    $slots[] = $now;
+                    Cache::set($key, $slots, 2);
+                    CacheLock::unlock($lockKey);
+                    $unlocked = true;
+                    return;     // 成功获取额度，直接返回
+                }
+                // 额度已满，记录最早时间戳后释放锁
+                $oldest = min($slots);
+                CacheLock::unlock($lockKey);
+                $unlocked = true;
+            } catch (Exception $e) {
+                // Cache 异常时确保锁释放，然后继续下一轮重试
+                if (!$unlocked) {
+                    CacheLock::unlock($lockKey);
+                }
+                $this->log('checkRateLimit cache error: '.$e->getMessage());
+                // 不抛出异常，继续下一次重试
+                continue;
+            }
+            $sleepSec = $oldest + $windowSec - $now;
+            if ($sleepSec < 0.001) $sleepSec = 0.001;
+            if ($sleepSec > 1.0)   $sleepSec = 1.0;
+            // 末尾加 0~maxRate 毫秒随机抖动，避免多进程同时醒来抢锁
+            $jitterUs = mt_rand(0, $maxRate * 1000);
+            usleep(intval($sleepSec * 1000000) + $jitterUs);
         }
-        $lastCall = timeFloat();
+
+        // 超时仍未通过：放行，由 imaginary 自身 503 兜底；避免阻塞PHP进程过久
+        $this->log('checkRateLimit timeout, give up (maxRate='.$maxRate.')');
+    }
+
+    // 可用；等待时间不够精准，偶尔超限
+    private function checkRateLimit2(){
+        $maxRate = $this->concurrency > 0 ? $this->concurrency : 10;
+        $key     = 'imgnry:rate:limit';
+        $maxRetry = 60;
+        for ($retry = 0; $retry < $maxRetry; $retry++) {
+            if (Cache::limitCall($key, 1, $maxRate, false)) {
+                return;   // 通过
+            }
+            // 未通过：随机等待 50~150ms 后重试
+            usleep(mt_rand(50000, 150000));
+        }
+        $this->log('checkRateLimit timeout, give up (maxRate='.$maxRate.')');
     }
 
     /**

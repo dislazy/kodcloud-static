@@ -39,10 +39,19 @@ return array(
 	'client.app.loginWebTips'			=> 'App已登录,扫描web端登录界面二维码登录web(App个人中心-扫描)',
 
 	'client.down.client'				=> '客户端下载',
-	'client.down.app'					=> 'App下载',
+	'client.down.title'					=> '客户端/APP下载',
+	'client.down.desc'					=> '选择适合您设备的版本，获取最新客户端体验',
+	'client.down.typePC'				=> '桌面客户端',
+	'client.down.typeApp'				=> '移动端 APP',
+	'client.down.appDown'				=> 'APP下载',
 	'client.down.apiErr'				=> '网络请求异常，请前往 <a href="https://kodcloud.com/download/" target="_blank">官网</a> 下载',
 	'client.down.linkErr'				=> '无效链接，请联系管理员！',
 	'client.down.webScan'				=> '使用手机浏览器扫码下载',
+	'client.down.manyVers'				=> '个版本，点击查看',
+	'client.down.clickDown'				=> '点击下载',
+	'client.down.noApps'				=> '没有可下载的应用，请联系管理员！',
+	'client.down.chip'					=> '芯片',
+	'client.down.moreList'				=> '共[0]个版本，点击进入列表页',
 
 	'client.tfa.tfaOpen'				=> '登录二次验证开启',
 	'client.tfa.tfaOpenDesc'			=> '开启后还需验证消息验证码，适用于账号密码登录。',
@@ -60,4 +69,11 @@ return array(
 	// 'client.tfa.userMtErr'				=> '用户信息不匹配！',
 	'client.tfa.sendEmpty'				=> '绑定的发送方式异常！',
 	'client.tfa.sendInvalid'			=> '发送方式格式错误！',
+
+	'client.tfa.totp'					=> '身份验证器',
+	'client.tfa.totpCode'				=> '动态验证码',
+	'client.tfa.bindTotp'				=> '绑定验证器',
+	'client.tfa.totpDesc'				=> '请使用谷歌、微软等验证器App扫码绑定',
+	'client.tfa.bindInfoErr'			=> '绑定信息异常！',
+	'client.tfa.tryRefresh'				=> '二维码加载失败，请刷新重试！',
 );

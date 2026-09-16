@@ -56,6 +56,13 @@ class NtcType {
                 'data'  => 0, 
                 'status'=> 0
             ),
+			array(
+                'type'  => 'feishu', 	
+                'name'  => LNG('NTC_TYPE_FEISHU'), 	
+                'desc'  => LNG('NTC_TYPE_FEISHU_DESC'),
+                'data'  => 0, 
+                'status'=> 0
+            ),
 		);
     }
 

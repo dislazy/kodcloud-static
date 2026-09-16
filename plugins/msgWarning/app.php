@@ -28,19 +28,32 @@ class msgWarningPlugin extends PluginBase{
 	}
 	public function echoJs(){
 		// 初始化计划任务——随系统安装时无法执行到切换状态、保存配置等
+		$this->initUpgrade();
 		$config = $this->getConfig();
-		if (!$config['initTask']) {
-			$this->apiAct()->updateTask(1);
+		if (!_get($config, 'initTask', 0)) {
+			$this->apiAct()->ensureTask(1);
 			$this->setConfig(array('initTask' => 1));
 		}
 		$this->echoFile('static/main.js');
 	}
 
+	// 升级补数据：新增默认事件、通知日志表等（幂等）
+	private function initUpgrade(){
+		$config = $this->getConfig();
+		$version = _get($config, 'initVersion', '');
+		$versionNow = $this->packageVersion();
+		if (!$versionNow) {$versionNow = '1.29';}
+		if ($version == $versionNow) return;
+		$this->loadLib('evnt')->initData();
+		$this->loadLib('logs')->initTable();
+		$this->apiAct()->ensureTask(1);
+		$this->setConfig(array('initVersion' => $versionNow));
+	}
+
     // 切换状态——更新计划任务
 	public function onChangeStatus($status){
 		if ($status) {
-			$this->loadLib('evnt')->initData();
-			$this->loadLib('logs')->initTable();
+			$this->initUpgrade();
 			$this->setConfig(array('pluginAuth' => json_encode(array('all'=>1))));
 		}
 		$this->apiAct()->updateTask($status);
@@ -51,12 +64,19 @@ class msgWarningPlugin extends PluginBase{
 		$this->loadLib('evnt')->initData();
 		$this->loadLib('logs')->initTable();
 		$config['pluginAuth'] = json_encode(array('all'=>1));	// 插件权限
-		$this->apiAct()->updateTask($status);
+		$versionNow = $this->packageVersion();
+		$config['initVersion'] = $versionNow ? $versionNow : '1.29';
+		$this->apiAct()->ensureTask($status);
         return $config;
 	}
 	// 卸载插件——删除计划任务
 	public function onUninstall(){
+		KodUser::checkRoot();
 		$this->apiAct()->delTask();
+		Cache::remove($this->pluginName.'.webNtcList.'.date('Ymd'));
+		Cache::remove($this->pluginName.'.msgQueue');
+		Cache::remove($this->pluginName.'.dataFileDownErr.'.date('Ymd'));
+		Cache::remove('io.error.list.get');
 	}
 
 	public function apiAct($st='sys',$act='task'){
@@ -78,6 +98,7 @@ class msgWarningPlugin extends PluginBase{
 	 */
 	public function autoTask(){
 		if (!KodUser::isRoot()) return;
+		$this->initUpgrade();
 		$this->notice(true);
 	}
 
@@ -94,6 +115,7 @@ class msgWarningPlugin extends PluginBase{
 	 * @return void
 	 */
     public function table(){
+		KodUser::checkRoot();
 		$tab = Input::get('tab', 'in', null, array('evnt','type','logs'));
 		$api = $this->loadLib($tab);
 		if (!$api) {show_json(LNG('common.illegalRequest'), false);}
@@ -105,6 +127,7 @@ class msgWarningPlugin extends PluginBase{
 	 * @return void
 	 */
     public function action(){
+		KodUser::checkRoot();
 		$tab = Input::get('tab', 'in', null, array('evnt','type','logs'));
 		$api = $this->loadLib($tab);
 		if (!$api) {show_json(LNG('common.illegalRequest'), false);}
@@ -116,6 +139,7 @@ class msgWarningPlugin extends PluginBase{
 	 * @return void
 	 */
 	public function taskInfo(){
+		KodUser::checkRoot();
 		$info = Model('SystemTask')->findByKey('event', $this->pluginName.'Plugin.autoTask');
 		show_json($info);
 	}

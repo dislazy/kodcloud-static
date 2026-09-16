@@ -3,6 +3,7 @@
  * 通知事件——操作系统类
  */
 class msgWarningMsgSvr extends Controller {
+	protected $pluginName;
 	public function __construct() {
 		parent::__construct();
 		$this->pluginName = 'msgWarningPlugin';

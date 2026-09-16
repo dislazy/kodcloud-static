@@ -3,6 +3,7 @@
  * 通知事件——数据资产类
  */
 class msgWarningMsgData extends Controller {
+	protected $pluginName;
 	public function __construct() {
 		parent::__construct();
 		$this->pluginName = 'msgWarningPlugin';
@@ -36,6 +37,7 @@ class msgWarningMsgData extends Controller {
 
 		// 超限的用户id列表缓存
 		$cckey = $this->pluginName.'.dataFileDownErr.'.date('Ymd');
+		Cache::removeMemory($cckey);
 		$cache = Cache::get($cckey);
 		$users = $cache ? explode(',', $cache) : array();
 

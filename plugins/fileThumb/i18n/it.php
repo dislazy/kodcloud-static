@@ -34,6 +34,8 @@ return array(
     "fileThumb.config.igryApiKeyDesc" => "Chiave API (-key)",
     "fileThumb.config.igryUrlKey"    => "Chiave URL",
     "fileThumb.config.igryUrlKeyDesc" => "Chiave di firma URL (-url-signature-key), almeno 32 caratteri",
+    "fileThumb.config.igryConc"      => "Trattamento del numero simultaneo",
+    "fileThumb.config.igryConcDesc"  => "Concurrenza delle richieste (-concurrency)",
     "fileThumb.config.igryNotMust"   => "Non essenziale",
     "fileThumb.check.title"          => "Rilevamento del servizio",
     "fileThumb.check.ing"            => "Test ambientali",

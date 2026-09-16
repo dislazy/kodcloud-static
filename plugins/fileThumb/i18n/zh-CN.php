@@ -26,7 +26,6 @@ return array(
 	'fileThumb.config.videoTaskLimitDesc'	=> '最大允许同时进行转码的任务数',
 	'fileThumb.config.videoTypeLimit'		=> '文件格式',
 	'fileThumb.config.videoTypeLimitDesc'	=> '指定文件格式才转码',
-	'fileThumb.config.videoTypeLimitDesc'	=> '指定文件格式才转码',
 	'fileThumb.config.playType'				=> '视频播放默认画质',
 	'fileThumb.config.playTypeDesc'			=> '选择流畅模式时,需要视频已经转码完成',
 	'fileThumb.config.imageSizeLimit'		=> '支持的最大图片',
@@ -43,6 +42,8 @@ return array(
 	'fileThumb.config.igryApiKeyDesc'		=> 'API密钥（-key）',
 	'fileThumb.config.igryUrlKey'			=> 'URL密钥',
 	'fileThumb.config.igryUrlKeyDesc'		=> 'URL签名密钥（-url-signature-key），至少32个字符',
+	'fileThumb.config.igryConc'				=> '处理并发数',
+	'fileThumb.config.igryConcDesc'			=> '请求并发数（-concurrency）',
 	'fileThumb.config.igryNotMust'			=> '非必需',
 
 	'fileThumb.check.title'				=> '服务检测',

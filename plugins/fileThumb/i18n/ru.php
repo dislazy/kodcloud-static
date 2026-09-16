@@ -34,6 +34,8 @@ return array(
     "fileThumb.config.igryApiKeyDesc" => "Ключ API (-key)",
     "fileThumb.config.igryUrlKey"    => "Ключ URL",
     "fileThumb.config.igryUrlKeyDesc" => "Ключ подписи URL (-url-signature-key), не менее 32 символов",
+    "fileThumb.config.igryConc"      => "Обработка параллельных чисел",
+    "fileThumb.config.igryConcDesc"  => "Количество параллельных запросов (- concurrency)",
     "fileThumb.config.igryNotMust"   => "Необязательно",
     "fileThumb.check.title"          => "Проверка службы",
     "fileThumb.check.ing"            => "Выполняется проверка среды...",
@@ -53,5 +55,5 @@ return array(
     "fileThumb.video.STATUS_RUNNING" => "Выполняется перекодирование...",
     "fileThumb.video.STATUS_LIMIT"   => "Превышен лимит одновременных задач. Повторите попытку позже.",
     "fileThumb.config.debug"         => "Режим отладки",
-    "fileThumb.config.debugDesc"     => "Включить запись журналов. <button class='btn btn-sm btn-default ml-20 view-log'>Открыть журнал</button>",
+    "fileThumb.config.debugDesc"     => "Включить запись журналов. <button class='btn btn-sm btn-default ml-20 view-log'>Открыть журнал</button>"
 );

@@ -137,8 +137,8 @@ class videoResize {
 		$quality 	= 'scale=-2:480 -b:v 1000k -maxrate 1000k -sws_flags accurate_rnd';//480:-2 -2:480 限制码率; 缩放图片处理
 		$timeStart 	= time();// 画质/速度: medium/ultrafast/fast
 		$logFile 	= $tempPath.'.log';@unlink($logFile);//-vf scale=480:-2 -b:v 1024k -maxrate 1000k -threads 2
-		$args 		= '-c:a aac -preset medium -vf '.$quality.' -strict -2 -c:v libx264 1>'.$logFile.' 2>&1';
-		$script 	= $plugin->memLimitParam('ffmpeg', $command).' -y -i "'.$localFile.'" '.$args.' "'.$tempPath.'"';
+		$args 		= '-c:a aac -preset medium -vf '.$quality.' -strict -2 -c:v libx264 1>'.escapeShell($logFile).' 2>&1';
+		$script 	= $plugin->memLimitParam('ffmpeg', $command).' -y -i '.escapeShell($localFile).' '.$args.' '.escapeShell($tempPath);
 		
 		// 后台运行
 		if($GLOBALS['config']['systemOS'] == 'windows'){
@@ -438,8 +438,7 @@ class videoResize {
 		}
 		return $info;
 	}
-	
-	
+
 	private function findBinPath($bin,$check){
 		$isWin = $GLOBALS['config']['systemOS'] == 'windows';
 		$path  = false;

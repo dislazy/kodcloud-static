@@ -34,6 +34,8 @@ return array(
     "fileThumb.config.igryApiKeyDesc" => "API金鑰（-key）",
     "fileThumb.config.igryUrlKey"    => "URL金鑰",
     "fileThumb.config.igryUrlKeyDesc" => "URL簽署金鑰（-url-signature-key），至少32個字符",
+    "fileThumb.config.igryConc"      => "處理併發數",
+    "fileThumb.config.igryConcDesc"  => "請求併發數（-concurrency）",
     "fileThumb.config.igryNotMust"   => "非必要",
     "fileThumb.check.title"          => "服務檢測",
     "fileThumb.check.ing"            => "環境檢測中",

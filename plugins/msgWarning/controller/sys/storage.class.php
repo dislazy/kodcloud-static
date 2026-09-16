@@ -22,6 +22,8 @@ class msgWarningSysStorage extends Controller {
 	 */
     public function checkStoreList ($task=false) {
         $cckey = $this->stCacheKey;
+        // 长驻计划任务进程中必须清除内存缓存，否则会一直读到首次加载的数据
+        Cache::removeMemory($cckey);
         $cache = Cache::get($cckey);
         if ($cache !== false && !$task) return $cache;
 
@@ -32,6 +34,7 @@ class msgWarningSysStorage extends Controller {
         // 判断存储是否可访问
         $model = Model('Storage');
         $data = array();
+		Cache::clearMemory(Model("SystemOption")->cacheKey('System.storageList'));	// 清除内存缓存
 		$list = $model->driverListSystem();
 		foreach($list as $item) {
             $id = $item['id'];
@@ -81,6 +84,7 @@ class msgWarningSysStorage extends Controller {
 	}
 	// 检查地址是否可访问
 	private function url_request_check($url, $opt=false, $timeout = 10) {
+		// TODO 检查webdav连接性
 		if (!filter_var($url, FILTER_VALIDATE_URL)) {return false;}
 		$ch = curl_init($url);
 		$op = array(
@@ -110,7 +114,7 @@ class msgWarningSysStorage extends Controller {
 	 */
     public function editAfter($result) {
         if (!$result || !$result['code']) return;
-		$id = $this->in['id'];
+		$id = _get($this->in, 'id', 0);
 		if (!$id) return;
 		$cache = Cache::get($this->stCacheKey);
 		if (!$cache || !isset($cache[$id])) return;

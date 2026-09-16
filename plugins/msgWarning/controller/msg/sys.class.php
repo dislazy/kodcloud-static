@@ -3,11 +3,17 @@
  * 通知事件——系统服务类
  */
 class msgWarningMsgSys extends Controller {
+	public $pluginName;
 	public function __construct() {
 		parent::__construct();
 		$this->pluginName = 'msgWarningPlugin';
     }
 
+	/**
+	 * 存储异常
+	 * @param array $evntInfo
+	 * @return array
+	 */
 	public function index($evntInfo) {
 		$data = array();
 		switch ($evntInfo['event']) {
@@ -32,8 +38,8 @@ class msgWarningMsgSys extends Controller {
 
 	/**
 	 * 存储异常
-	 * @param [type] $evntInfo
-	 * @return void
+	 * @param array $evntInfo
+	 * @return array
 	 */
 	public function sysStoreErr($evntInfo) {
 		$data = Action($this->pluginName)->apiAct('sys', 'storage')->checkStoreList(true);
@@ -56,8 +62,8 @@ class msgWarningMsgSys extends Controller {
 
 	/**
 	 * 备份存储异常
-	 * @param [type] $evntInfo
-	 * @return void
+	 * @param array $evntInfo
+	 * @return array
 	 */
 	public function sysStoreBakErr($evntInfo) {
 		// 获取备份存储
@@ -76,8 +82,8 @@ class msgWarningMsgSys extends Controller {
 
 	/**
 	 * 默认存储空间不足
-	 * @param [type] $evntInfo
-	 * @return void
+	 * @param array $evntInfo
+	 * @return array
 	 */
 	public function sysStoreSizeErr($evntInfo) {
 		$policy = $evntInfo['policy'];
@@ -127,8 +133,8 @@ class msgWarningMsgSys extends Controller {
 
 	/**
 	 * 备份任务异常
-	 * @param [type] $evntInfo
-	 * @return void
+	 * @param array $evntInfo
+	 * @return array
 	 */
 	public function sysBakTaskErr($evntInfo) {
 		// 1.判断备份是否启用
@@ -156,25 +162,29 @@ class msgWarningMsgSys extends Controller {
 
 		// 3.2 备份完成，判断是否成功——参考前端bakStatus
 		$state = true;
-		unset($info['result']['keep']);
-		if ($info['content'] == 'sql') {
-			unset($info['result']['file']);
-		}
-		foreach ($info['result'] as $key => $item) {
-			if (!$item['status']) {
-				$state = false;
-				break;
-			}
-			// 数据库文件数不匹配
-			if (in_array($key, array('db', 'dbFile')) && $item['total'] > $item['success']) {
-				$state = false;
-				break;
-			}
-			// // 文件未备份完成
-			// if ($key == 'file' && $item['cntTotal'] != $item['cntSuccess']) {
-			// 	$state = false;
-			// 	break;
-			// }
+		// unset($info['result']['keep']);
+		// if ($info['content'] == 'sql') {
+		// 	unset($info['result']['file']);
+		// }
+		// foreach ($info['result'] as $key => $item) {
+		// 	if (!$item['status']) {
+		// 		$state = false;
+		// 		break;
+		// 	}
+		// 	// 数据库文件数不匹配
+		// 	if (in_array($key, array('db', 'dbFile')) && $item['total'] > $item['success']) {
+		// 		$state = false;
+		// 		break;
+		// 	}
+		// 	// // 文件未备份完成
+		// 	// if ($key == 'file' && $item['cntTotal'] != $item['cntSuccess']) {
+		// 	// 	$state = false;
+		// 	// 	break;
+		// 	// }
+		// }
+		// 仅检查状态，不再对比success/total
+		if (_get($info,'result.db.status') == '0' || _get($info,'result.dbFile.status') == '0') {
+			$state = false;
 		}
 		if ($state) return array();
 

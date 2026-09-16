@@ -4,6 +4,7 @@ ClassBase.define({
 		var package = this.formData();
 		var form = this.initFormView(package); // parent: form.parent;
 		form.setValue(G.clientOption);
+		Events.trigger('client.menu.page.loaded', this);
 	},
 	
 	saveConfig: function(data){
@@ -14,7 +15,7 @@ ClassBase.define({
 	formData:function(){
 		return{
 		formStyle:{
-			className:"form-box-title-block dialog-form-style-simple",
+			className:"form-box-title-block dialog-form-style-simple admin-client-page",
 			tabs:{
 				backup:"sep002,backupOpen,backupTipsOpen,backupTipsClose,backupAuth",
 				open:"sep003,fileOpenSupport,fileOpen",

@@ -54,7 +54,7 @@ class msgWarningSysNotice extends Controller {
 						$check	 => array('<>',''),	// sms/email分别查询，无需用or
 					);
 					$users = Model('User')->where($where)->field('userID,name,nickName,email,phone')->select();
-					if (empty($users)) continue;
+					if (empty($users)) break;
 
 					// 发送消息
 					$logs['method'] = $method;
@@ -74,6 +74,7 @@ class msgWarningSysNotice extends Controller {
 					break;
 				case 'weixin':
 				case 'dding':
+				case 'feishu':
 					$logs['method'] = $method;
 					$logs['target'] = '';
 					$this->byThird($target, $message, $logs);
@@ -105,7 +106,8 @@ class msgWarningSysNotice extends Controller {
 		// 发送消息
 		$typeArr = array(
 			'weixin' => 'weChat',
-			'dding'	 => 'dingTalk'
+			'dding'	 => 'dingTalk',
+			'feishu' => 'feishu',
 		);
 		$title = $logs['title'];
 		$content = array_merge(array('**'.$title.'**'), $content);
@@ -183,9 +185,9 @@ class msgWarningSysNotice extends Controller {
 
 	// 消息内容生成链接，默认为md格式：[链接](http://kodbox.com)，故企微/钉钉无需替换
 	private function parseLink($content, $email=true){
-		$pattern = '/\[(.+?)\]\s*\((https?:\/\/[^\s)]+)\)/s';;
+		$pattern = '/\[(.+?)\]\s*\((https?:\/\/[^\s)]+)\)/s';
 		$replacement = $email ? '<a href="$2" target="_blank">$1</a>' : '$1 ($2)';
-		return preg_replace($pattern, $replacement, $text);
+		return preg_replace($pattern, $replacement, $content);
 	}
 
 	/**
@@ -218,6 +220,7 @@ class msgWarningSysNotice extends Controller {
 	 */
 	public function oldTaskQueue(){
 		$key = $this->pluginName.'.msgQueue';
+		Cache::removeMemory($key);
 		$cache = Cache::get($key);
 		if (!$cache) return;
 
@@ -243,6 +246,7 @@ class msgWarningSysNotice extends Controller {
 		if ($rest) return;
 		// 添加失败，存入缓存，下次任务开始时读取然后继续添加
 		$key = $this->pluginName.'.msgQueue';
+		Cache::removeMemory($key);
 		$cache = Cache::get($key);
 		if (!$cache) $cache = array();
 		$cache[] = $args;

@@ -26,12 +26,13 @@ class logsApi {
 	 * @return void
 	 */
 	public function initTable() {
-		if ($this->getAppConfig('initDbTable')) return;
+		// if ($this->getAppConfig('initDbTable')) return;
 		// 判断插件表是否已存在，不存在则新建
 		$tables = Model()->db()->getTables();
 		if (in_array($this->tableName, $tables)) {
 			return $this->setAppConfig(array('initDbTable' => 1));
 		}
+		// 标记存在但表被删除/恢复丢失时，允许重新创建
 		$path = __DIR__.'/data/plugin_msgwarning_log.sql';
 		if(stristr($GLOBALS['config']['database']['DB_TYPE'],'sqlite')){
 			$path = __DIR__.'/data/plugin_msgwarning_log.sqlite.sql';
@@ -56,8 +57,8 @@ class logsApi {
 		$time = _get($req, 'time', 30);	// 默认近30天
 		if ($time != 'all') {
 			if ($time == 'diy') {
-				$timeFrom = strtotime($req['timeFrom']);
-				$timeTo = strtotime($req['timeTo'].' 23:59:59');
+				$timeFrom = strtotime(_get($req, 'timeFrom', date('Y-m-d', strtotime('-7 days'))));
+				$timeTo = strtotime(_get($req, 'timeTo', date('Y-m-d')).' 23:59:59');
 			} else {
 				$timeFrom = strtotime(date('Y-m-d', strtotime('-'.$time.' days')));
 				$timeTo = strtotime(date('Y-m-d 23:59:59'));
@@ -87,6 +88,11 @@ class logsApi {
 	 * @return void
 	 */
 	public function add($data){
+		static $tableReady = false;
+		if (!$tableReady) {
+			$this->initTable();
+			$tableReady = true;
+		}
 		// 日志：通知事件、通知对象、通知方式、通知结果、通知时间
 		$data = array(
 			'event'		=> _get($data, 'event', ''),

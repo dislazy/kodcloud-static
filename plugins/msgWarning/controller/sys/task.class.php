@@ -1,5 +1,6 @@
 <?php 
 class msgWarningSysTask extends Controller {
+	protected $pluginName;
 	public function __construct() {
 		parent::__construct();
 		$this->pluginName = 'msgWarningPlugin';
@@ -23,6 +24,11 @@ class msgWarningSysTask extends Controller {
 			'enable' => $status
 		);
 		Model('SystemTask')->update($task['id'], $data);
+	}
+	// 任务不存在时创建；已存在则保留用户当前的启用/停用状态
+	public function ensureTask($status = 1){
+		if ($this->getTask()) return true;
+		return $this->addTask($status);
 	}
 	private function addTask($status){
 		$data = array (
@@ -133,7 +139,13 @@ class msgWarningSysTask extends Controller {
 				}
 				// 4.1 预警级+ 写入log日志
 				if ($evntInfo['level'] >= 3) {
-					write_log('【系统通知】'.$evntInfo['title'].': '.implode('; ', $message), 'warning');
+					$logMsg = $message;
+					if (is_array($logMsg)) {
+						$logMsg = implode('; ', array_map(function($line){
+							return is_array($line) || is_object($line) ? json_encode_force($line) : $line;
+						}, $logMsg));
+					}
+					write_log('【系统通知】'.$evntInfo['title'].': '.$logMsg, 'warning');
 				}
 
 				// 4.2 发送通知——支持发送多条不同消息
@@ -149,7 +161,7 @@ class msgWarningSysTask extends Controller {
 
 		// 存前端缓存——未被覆盖的继续保留，用户23点登录系统接收到的可能是8点的通知；临界点打开时与下一次间隔较小，忽略处理
 		$cckey = $this->pluginName.'.webNtcList.'.date('Ymd');
-		Cache::removeMemory($cckey);	// 重要，否则计划任务（同一进程）始终读取的是内存缓存
+		Cache::removeMemory($cckey);	// 先清除内存缓存——重要，否则计划任务（同一进程）始终读的是它而非redis最新值（被webNotice修改）
 		$cache = Cache::get($cckey);
 		if (!is_array($cache)) $cache = array();
 		$cache = array_merge($cache, $wbcache);
@@ -164,7 +176,7 @@ class msgWarningSysTask extends Controller {
 
 		$notice = _get($evntInfo, 'notice', array());	// 通知设置
 		$result = _get($evntInfo, 'result', array());	// 通知结果
-		$target = json_decode($notice['target'], true);
+		$target = json_decode(_get($notice, 'target', ''), true);
 		if (empty($target)) $target = array();
 
 		// 通知次数
@@ -175,7 +187,14 @@ class msgWarningSysTask extends Controller {
 
 		// 通知时段
 		$timeNow = time();
-		if (strtotime($notice['timeFrom']) > $timeNow || strtotime($notice['timeTo']) < $timeNow) return false;
+		$timeFrom = strtotime(_get($notice, 'timeFrom', '00:00'));
+		$timeTo   = strtotime(_get($notice, 'timeTo', '23:59'));
+		if ($timeFrom > $timeTo) {
+			// 跨天时段，例如 22:00 ~ 次日 06:00
+			if ($timeNow < $timeFrom && $timeNow > $timeTo) return false;
+		} else {
+			if ($timeFrom > $timeNow || $timeTo < $timeNow) return false;
+		}
 
 		// 任务执行频率——注意这里不是通知频率：事件任务执行后，如果有消息，再根据通知频率判断是否通知
 		$taskFreq = intval(_get($evntInfo, 'taskFreq', 0));
@@ -186,7 +205,7 @@ class msgWarningSysTask extends Controller {
 		}
 
 		// 通知方式
-		if (empty($notice['method'])) return false;
+		if (!_get($notice, 'method')) return false;
 		// toAll：将[系统通知]添加到通知方式中——前端限制取消后，此处没有必要强制添加
 		if ($evntInfo['toAll'] == '1') {
 			if (stripos($notice['method'], 'kwarn') === false) {
@@ -205,37 +224,45 @@ class msgWarningSysTask extends Controller {
 
 	// 通过form.userGroup获取用户id列表：{user:[1,2,3],group:[1,2,3]}
 	private function getTargetUsers($target) {
-		// 缓存不同条件下的部门用户
-		static $groupUsers = array();
+		// 短期缓存部门用户，避免长驻进程内名单永不刷新
+		static $groupUsers = array('time'=>0, 'data'=>array());
+		$cacheTtl = 600;	// 10 分钟
+		if (time() - $groupUsers['time'] > $cacheTtl) {
+			$groupUsers = array('time'=>time(), 'data'=>array());
+		}
+		$groupCache = &$groupUsers['data'];
 
 		$users = _get($target, 'user', array());
 		$group = _get($target, 'group', array());
+		if (!is_array($users)) $users = $users === '' ? array() : explode(',', $users);
+		if (!is_array($group)) $group = $group === '' ? array() : explode(',', $group);
 		if (empty($group)) return array_filter(array_unique($users));
 		
 		// 获取部门下的用户：有根部门则为全部用户
 		$list = array();
 		sort($group);
 		if (in_array('1', $group)) {
-			if (isset($groupUsers['1'])) {
-				$list = $groupUsers['1'];
+			if (isset($groupCache['1'])) {
+				$list = $groupCache['1'];
 			} else {
 				$list = Model('User')->where(array('status' => 1))->field('userID')->select();
 				$list = array_to_keyvalue($list, '', 'userID');
-				$groupUsers['1'] = $list;
+				$groupCache['1'] = $list;
 			}
 		} else {
 			$tmpKey = implode(',', $group);
-			if (isset($groupUsers[$tmpKey])) {
-				$list = $groupUsers[$tmpKey];
+			if (isset($groupCache[$tmpKey])) {
+				$list = $groupCache[$tmpKey];
 			} else {
 				$list = Model('user_group')->alias('g')->field('u.userID')
 						->join('INNER JOIN user as u ON u.userID = g.userID AND u.status = 1')
 						->where(array('g.groupID' => array('in', $group)))
 						->select();
 				$list = array_to_keyvalue($list, '', 'userID');
-				$groupUsers[$tmpKey] = $list;
+				$groupCache[$tmpKey] = $list;
 			}
 		}
+		unset($groupCache);
 		$users = array_merge($users, $list);
 
 		if (empty($users)) return array();
@@ -299,7 +326,7 @@ class msgWarningSysTask extends Controller {
 		foreach ($cache as $event => &$item) {
 			if (!$item) continue;
 			// kwarn通知范围为all时，获取并追加自己的id，后续再获取时，如果已存在则忽略
-			if (stripos($item['kwarn'], 'all') !== false) {
+			if (!empty($item['kwarn']) && stripos($item['kwarn'], 'all') !== false) {
 				$users = explode(',', $item['kwarn']);
 				if (!in_array(USER_ID, $users)) {
 					$data['kwarn'][$event] = $item['msg'];
@@ -308,6 +335,7 @@ class msgWarningSysTask extends Controller {
 				continue;
 			}
 			foreach (array('ktips', 'kwarn') as $key) {
+				if (!isset($item[$key])) continue;
 				$users = explode(',', $item[$key]);
 				if (in_array(USER_ID, $users)) {
 					$data[$key][$event] = $item['msg'];

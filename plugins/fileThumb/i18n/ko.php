@@ -34,6 +34,8 @@ return array(
     "fileThumb.config.igryApiKeyDesc" => "API 키(-키)",
     "fileThumb.config.igryUrlKey"    => "URL 키",
     "fileThumb.config.igryUrlKeyDesc" => "URL 서명 키(-url-signature-key), 최소 32자",
+    "fileThumb.config.igryConc"      => "병렬 처리",
+    "fileThumb.config.igryConcDesc"  => "동시 요청 수(-concurrency)",
     "fileThumb.config.igryNotMust"   => "비필수",
     "fileThumb.check.title"          => "서비스 감지",
     "fileThumb.check.ing"            => "환경 테스트",

@@ -18,7 +18,8 @@ kodReady.push(function(){
 	});
 	Events.bind("admin.leftMenu.before",function(menuList){
 		menuList.push({
-			title:LNG['fileThumb.meta.name']+'&'+LNG['fileThumb.video.title'],
+			// title:LNG['fileThumb.meta.name']+'&'+LNG['fileThumb.video.title'],
+			title:'{{package.name}}',
 			icon:"ri-movie-line-2",
 			link:"admin/storage/fileThumb",
 			after:'admin/storage/share',//after/before; 插入菜单所在位置;

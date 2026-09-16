@@ -51,8 +51,8 @@ class webdavClient {
 	// 存储options返回头DAV字段;(标记支持项)
 	private function patchCheck(){
 		$data = $this->options('/');
-		if(!$data['header'] || !$data['header']['DAV']) return;
-		$this->options['dav'] = $data['header']['DAV'];
+		if(!$data['header'] || !$data['header']['dav']) return;
+		$this->options['dav'] = $data['header']['dav'];
 		$GLOBALS['in']['config'] = json_encode($this->options,true);// 修改配置;
 	}
 
@@ -204,35 +204,35 @@ class webdavClient {
 		$responseBody 	= substr($response, $headerSize);
 		$responseHeader = substr($response, 0, $headerSize);
 		$responseHeader = parse_headers($responseHeader);
+		foreach($responseHeader as $k => $v){
+			$responseHeader[strtolower($k)] = $v;
+		}
 
 		$headerSet = $this->header;$this->header = array();
 		$code = $responseInfo['http_code'];
 		if($code == 0){
 			$errorMessage = curl_error($ch);
 			$errorMessage = $errorMessage ? "\n".$errorMessage : 'Network error!';
-			return $this->parseResult(0,$errorMessage,$responseInfo,$headerSet);
+			return $this->parseResult(0,$errorMessage,$responseInfo);
 		}
 
 		curl_close($ch);
-		$result = $this->parseResult($code,$responseBody,$responseHeader,$headerSet);
-		$this->sendLog($result,$method,$requestUrl,$headerSet);
+		$result = $this->parseResult($code,$responseBody,$responseHeader);
+		$this->sendLog($result,$method,$requestUrl);
 		$this->cookieSave($result);
 		// trace_log([$requestUrl,$method,$result]);
 		
 		return $result;
 	}
 	
-	private function parseResult($code,$body,$header,$headerSet){
+	private function parseResult($code,$body,$header){
 		$status = $code >= 200 && $code <= 299;
 		$result = array('code'=>$code,'status'=>$status,'header'=>$header,'data'=>$body);
 		if($code == 0){$result['error'] = $body;}
 		if(!$body) return $result;
 
 		$error = $status ? '':$header['0'];
-		$contentType = is_array($header['content-type']) ? $header['content-type'][0]:$header['content-type'];
-		if(!$contentType){ // 301跳转情况;
-			$contentType = is_array($header['Content-Type']) ? $header['Content-Type'][0]:$header['Content-Type'];
-		}
+		$contentType = _get($header,'content-type.0',_get($header,'content-type',''));
 		if(strstr($contentType,'/json')){
 			$result['data']  = @json_decode($body,true);
 			if( !$status && is_array($result['data']) && 
@@ -256,8 +256,8 @@ class webdavClient {
 		return $result;
 	}
 	// 请求日志; 
-	private function sendLog($result,$method,$requestUrl,$headerSet){
-		// $this->plugin->clientLog(array($method,$requestUrl,$headerSet,$result));
+	private function sendLog($result,$method,$requestUrl){
+		// $this->plugin->clientLog(array($method,$requestUrl,$result));
 		$message = $result['status'] ? $result['header']['0'] : $result['error'];
 		$this->plugin->clientLog($method.':'.$requestUrl.';'.$message);
 		if(!$result['status'] && $method != 'PROPFIND'){

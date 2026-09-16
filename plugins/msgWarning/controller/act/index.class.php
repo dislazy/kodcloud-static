@@ -15,7 +15,7 @@ class msgWarningActIndex extends Controller {
 		return isset($key) ? _get($config, $key, $def) : $config;
 	}
 	public function setAppConfig($value){
-		$this->plugin->setConfig($value);
+		Action($this->pluginName)->setConfig($value);
 	}
 
 	/**
@@ -31,6 +31,9 @@ class msgWarningActIndex extends Controller {
 		$list = $this->getAppConfig('ntcEvntList', array());
 		$info = _get($list, $event, array());
 		if (!$info) return;
+		// 事件停用后不应继续拦截下载
+		$status = _get($info, 'status', 0);
+		if ($status != '1') return;
 		$open = _get($info, 'policy.doAction', 0);
 		if ($open != '1') return;
 

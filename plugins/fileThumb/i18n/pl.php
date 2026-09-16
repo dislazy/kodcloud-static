@@ -34,6 +34,8 @@ return array(
     "fileThumb.config.igryApiKeyDesc" => "Klucz API (-key)",
     "fileThumb.config.igryUrlKey"    => "Klucz URL",
     "fileThumb.config.igryUrlKeyDesc" => "Klucz podpisu URL (-url-signature-key), co najmniej 32 znaki",
+    "fileThumb.config.igryConc"      => "Przetwarzanie liczby równoległych",
+    "fileThumb.config.igryConcDesc"  => "Liczba jednoczesnych żądań (-concurrency)",
     "fileThumb.config.igryNotMust"   => "Nieistotny",
     "fileThumb.check.title"          => "Wykrywanie usług",
     "fileThumb.check.ing"            => "Badania środowiskowe",
