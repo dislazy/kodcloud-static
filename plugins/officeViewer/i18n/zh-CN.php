@@ -3,7 +3,7 @@ return array(
 	"officeViewer.meta.name"					=> "Office阅读器",
 	"officeViewer.meta.title"					=> "Office在线预览",
 	"officeViewer.meta.desc"					=> "Office文件在线预览。本应用整合了WebOffice、LibreOffice、officeLive、永中office等方式，实现office文件基本的在线预览需求。",
-	'officeViewer.meta.netwrokDesc'				=> "<h4>说明 :</h4>本应用在运行过程中，可能涉及外网请求。其中，WebOffice和LibreOffice无需请求外网，其他可能涉及的外网接口分别如下： <br/>
+	'officeViewer.meta.netwrokDesc'				=> "<h4>说明 :</h4>本应用在运行过程中，如果启用了officeLive和永中Office服务，可能涉及外网请求，接口分别如下： <br/>
 													officeLive：<br/>
 													<span class='blue-6'>https://owa-box.vips100.com</span><br/>
 													<span class='blue-6'>https://docview.mingdao.com</span><br/>
@@ -18,8 +18,8 @@ return array(
 	'officeViewer.meta.svcOpen'					=> "启用服务",
 
 	'officeViewer.main.error'					=> "操作失败！",
-	'officeViewer.main.invalidType'				=> "无效的打开方式，请联系管理员！",
-	'officeViewer.main.invalidUrl'				=> "无效的请求地址，请联系管理员！",
+	'officeViewer.main.invalidType'				=> "当前方式无法预览此文件，请选择其他打开方式！",
+	'officeViewer.main.invalidUrl'				=> "无效的请求地址，请尝试重新打开或选择其他方式！",
 	'officeViewer.main.notNetwork'				=> "请求失败，检查服务器能否连接网络。",
 	'officeViewer.main.needNetwork'				=> "服务器需在外网",
 	'officeViewer.main.needDomain'				=> "，且为域名访问。",
@@ -27,7 +27,7 @@ return array(
 	"officeViewer.main.invalidExt"				=> "不支持的文件格式",
 
 	"officeViewer.webOffice.name"				=> "自动解析",
-	"officeViewer.webOffice.desc"				=> "选择【自动解析】时，会首先使用<code style='color:#c7254e'>前端解析</code>方式（doc、ppt除外），如果不支持，将自动切换为下一种；<br>前端解析速度快、无需借助外网和其他服务，但部分内容可能显示不全或异常。<br><br>如果希望显示风格统一，或支持更多格式，可选择其他方式。",
+	"officeViewer.webOffice.desc"				=> "选择【自动解析】时，会优先使用<code style='color:#c7254e'>前端解析</code>方式（doc、ppt除外），如果不支持，将自动切换为下一种；<br>前端解析无需借助外网和其他服务，加载速度快，但排版与原文件有一定差异，部分内容可能显示不全或异常。<br><br>如果希望显示风格统一，或支持更多格式，可指定其他解析方式。",
 	"officeViewer.webOffice.parsing"			=> "正在解析",
 	"officeViewer.webOffice.reqErrPath"			=> "请求失败，检查文件是否正常！",
 	"officeViewer.webOffice.reqErrNet"			=> "加载时间过长，检查网络是否正常！",
@@ -52,10 +52,10 @@ return array(
 	'officeViewer.libreOffice.checkOk' 			=> "恭喜，一切正常",
 	'officeViewer.libreOffice.checkErr' 		=> "运行环境异常",
 
-	"officeViewer.officeLive.desc"				=> "<div style='margin-top:3px;'>通过微软office服务解析文件（通过文件外链解析），实现文件预览。<br/><code style='color:#c7254e'>服务器需在外网，且为域名访问</code><br>内网的用户，可以自己搭建;<a href='https://kodcloud.com/help/show-5.html' target='_blank'>了解详情</a></div>",
+	"officeViewer.officeLive.desc"				=> "<div style='margin-top:3px;'>通过微软office服务解析文件（通过文件外链解析），实现文件预览。<br/><code style='color:#c7254e'>服务器需在外网，且为域名访问；可能导致文件泄露，请谨慎启用</code><br>内网的用户，可以自己搭建;<a href='https://kodcloud.com/help/show-5.html' target='_blank'>了解详情</a></div>",
 	"officeViewer.officeLive.apiServer"			=> "服务器接口",
-	"officeViewer.officeLive.apiServerDesc"		=> "<div class='can-select'>微软官方服务及第三方服务接口，选其中一个填写：<br/>
-													<div class='mt-5'> https://view.officeapps.live.com/op/embed.aspx?src=</div>
+	"officeViewer.officeLive.apiServerDesc"		=> "<div class='can-select mt-5'>微软官方服务及第三方服务接口，选其中一个填写：<br/>
+													<div class='grey-8'> https://view.officeapps.live.com/op/embed.aspx?src=</div>
 													<div class='grey-8'>https://owa-box.vips100.com/op/view.aspx?src=</div>
 													<div class='grey-8'>https://docview.mingdao.com/op/view.aspx?src=</div>
 													<div class='grey-8'>https://preview.tita.com/op/view.aspx?src=</div>
@@ -63,7 +63,7 @@ return array(
 
 
 	'officeViewer.yzOffice.name' 				=> "永中Office",
-	'officeViewer.yzOffice.desc' 				=> "<div style='margin-top:3px;'>通过永中office服务解析文件（文件会上传至其服务器），实现文件预览。<br><code style='color:#c7254e'>服务器需能访问外网</code></div>",
+	'officeViewer.yzOffice.desc' 				=> "<div style='margin-top:3px;'>通过永中office服务解析文件（文件会上传至其服务器），实现文件预览。<br><code style='color:#c7254e'>服务器需能访问外网；可能导致文件泄露，请谨慎启用</code></div>",
 	'officeViewer.yzOffice.transfer' 			=> "1.数据传输中,请稍后...",
 	'officeViewer.yzOffice.converting'			=> '2.文件转换中,请稍后...',
 	'officeViewer.yzOffice.uploadError' 		=> "上传失败,请检查php执行超时时间!",

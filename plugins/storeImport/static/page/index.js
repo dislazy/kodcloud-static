@@ -8,22 +8,31 @@ ClassBase.define({
             $toolbar.append('<div class="right"><button class="kui-btn import">'+LNG['storeImport.meta.name']+'</button></div>');
         }
         $toolbar.undelegate('button.import','click');
-        $toolbar.delegate('button.import', 'click', _.bind(this.impDialog, this));
+        $toolbar.delegate('button.import', 'click', _.bind(this.showDialog, this));
 
         this.notifyList = {};
     },
 
-    impDialog: function() {
+    showDialog: function() {
         var option = {
             id: 'store-import-dg',
-            ico: '<i class="font-icon ri-folder-transfer-line"></i>',
+            ico: '<i class="font-icon ri-folder-received-line"></i>',
             title: LNG['storeImport.meta.name'],
-            // width:680,height:565,
-            width:720,height:600,
+            width:840,height:600,
             okVal: LNG['common.ok'],
         };
         var formData = {
-			formStyle:{className: "form-box-title-block"},
+			formStyle:{
+                className: "form-box-title-block",
+                tabs:{
+                    import:"desc,pathFrom,pathTo",
+                    logList:"logList",
+                },
+                tabsName:{
+                    import:LNG['storeImport.meta.name'],
+                    logList:LNG['common.history'],
+                }
+            },
 			desc: {
 				type: "html",
 				display: LNG['admin.setting.recDesc'],
@@ -45,7 +54,11 @@ ClassBase.define({
                     pathTree:'{block:driver}/',
 				},
 				attr: {"placeholder":LNG['admin.storage.localStore']},
-                desc: LNG['storeImport.main.ioFromPathDesc'],
+                desc: '<div>\
+                        <span style="display: inline-block; vertical-align: top; margin-top: 10px;">'+LNG['storeImport.main.ioFromPathDesc']+'</span>\
+                        <span class="kui-btn ml-5 mt-5 mr-5 check-cnt">'+LNG['storeImport.main.checkCnt']+'</span >\
+                        <span style="display: inline-block; vertical-align: top; margin-top: 10px; color:#555;" class="value-cnt"></span>\
+                        </div>',
                 require:1
 			},
 			pathTo: {
@@ -66,49 +79,74 @@ ClassBase.define({
                 desc: LNG['storeImport.main.ioToPathDesc'],
                 require:1
 			},
-            // checkHash: {
-            //     type:"switch",
-            //     value:0,
-            //     display:"计算文件哈希（仅限本地存储）",
-            //     desc:"为导入的文件计算哈希值，后续上传同文件时可实现秒传。计算哈希比较耗时，文件较多时不建议开启。",
-            //     className:"hidden"
-            // },
-            cli: {
-                type:"html",
-				display:' ',
-				value: '<div class="mt-10">\<div>'+LNG['storeImport.task.desc1']+'<span class="kui-btn btn btn-sm" style="vertical-align:bottom">'+LNG['explorer.copy']+'</span></div>\
-                <code style="overflow-wrap:break-word;white-space:normal;display:block;padding:6px 10px!important;margin-top:5px;border-radius:4px;"></code>\
-                <div class="mt-5 desc">'+LNG['storeImport.task.desc2']+'</div>\
-                </div>'
-            }
+            logList:{
+                type:"table",
+                info:{
+                    // TODO 可以加个删除，尤其是失败项
+                },
+                row:{
+                    userID:{display:LNG['common.user'],template:'{{userInfo.nickName || userInfo.name}}'},
+                    pathFrom:{display:LNG['common.detail'],template:'<code>{{pathFrom}} => {{pathTo}}</code>'},
+                    status:{display:LNG['common.result'],template:'<span class="color-label icon-dot {{stateInfo.color}}-normal" title="{{stateInfo.text}}" title-timeout="200">{{taskInfo.taskFinished}} / {{taskInfo.taskTotal}}</span>'},
+                    time:{display:LNG['admin.backup.timeTaken'],template:'{{window.timeShow((modifyTime - createTime) || 1)}}'},
+                    createTime:{display:LNG['common.operateTime'],template:'{{window.dateFormat(createTime,"Y-m-d H:i:s")}}'}
+                },
+            },
 		};
         var self = this;
         this.formMaker = new kodApi.formMaker({parent:this,formData:formData});
         this.formMaker.renderDialog(option, function (data) {
-            // var hash = data.checkHash == '1' ? 1 : 0;
             self.doImport(_.pick(data, ['pathFrom','pathTo']));
             return false;
         });
-        // this.listenTo(this.formMaker,'onChange',function(key,value,$row){});
-        this.formMaker.bind('onChange',function(key,value) {
-            self.formMaker.$('.item-cli').hide();
-            if (!value) return;
-            var pathFrom = key == 'pathFrom' ? value : self.formMaker.getValue('pathFrom');
-            var pathTo = key == 'pathTo' ? value : self.formMaker.getValue('pathTo');
-            if (!pathFrom || !pathTo || !_.startsWith(pathFrom, '{io:') || !_.startsWith(pathTo, '{source:')) return;
+        this.initLogList(); // TODO 切换时才获取，避免数据量大导致加载慢
+        // this.bind('onRemove',function(){
+        //     self.formMaker && self.formMaker.objectRemove();
+		// });
 
-            var cmd = "sudo -u nginx php "+G.kod.BASIC_PATH+"index.php 'admin/storage/import&accessToken="+G.kod.accessToken+"' --pathFrom-'"+pathFrom+"' --pathTo-'"+pathTo+"'";
-            self.formMaker.$('.item-cli code').html(cmd);
-            self.formMaker.$('.item-cli').show();
-		});
-        this.formMaker.$el.delegate('.item-cli .btn', 'click', function(){
-            $.copyText($(this).parents('.setting-content').find('code').text());
-			Tips.tips(LNG['explorer.share.copied']);
+        // 检查原始目录数据量
+        this.formMaker.$('.item-pathFrom .check-cnt').click(function(){
+            var pathFrom = self.formMaker.getValue('pathFrom');
+            if (!pathFrom) return Tips.tips(LNG['storeImport.main.selectFromPath'], 'warning');
+
+            var $btn = $(this);
+            $btn.addClass('disable-event');
+            var tips = Tips.loadingMask(false, LNG['storeImport.main.checkCnt']+'...');
+            kodApi.requestSend('plugin/storeImport/check',{pathFrom: pathFrom},function(result) {    // &hash='+hash
+                tips && tips.close();
+                $btn.removeClass('disable-event');
+                if (!result || !result.code) return Tips.close(result);
+
+                var folders = _.get(result, 'data.folder', 0);
+                var files = _.get(result, 'data.file', 0);
+                var total = folders + files;
+
+                var html = _.replace(_.replace(LNG['storeImport.main.allCnt'],'[0]',folders),'[1]',files)
+                if (total > 4000000) {
+                    html += '<span class="red-6 ml-10">'+LNG['storeImport.main.errCnt']+'</span>';
+                } else if (total > 2000000) {
+                    html += '<span class="orange-5 ml-10">'+LNG['storeImport.main.warnCnt']+'</span>';
+                }
+                $btn.next().html(html);
+            });
         });
+        this.formMaker.bind('onChange',function(key,value,$row){
+			if (key != 'pathFrom') return true;
+            $row.find('.desc .value-cnt').html('');
+		});
     },
     onRemove: function () {
-        // TODO 
+        // TODO 触发不了，原因未知
         this.formMaker && this.formMaker.objectRemove();
+    },
+
+    // 初始化（刷新）历史记录
+    initLogList: function(){
+        var self = this;
+        kodApi.requestSend('plugin/storeImport/logGet',{},function(result) {
+            if (!result || !result.code) return;
+            self.formMaker.setValue('logList', result.data);
+		});
     },
 
     // 导入提交
@@ -122,6 +160,7 @@ ClassBase.define({
         var key  = md5('store_import_'+jsonEncode(data));
         var notify = this.notifyList[key] || null;
         if (notify) return Tips.tips(LNG['storeImport.task.subErr'], 'warning');
+        data.taskId = key + '-' + timeFloat()+roundString(4);
 
         var self = this;
         var tips = Tips.loadingMask();
@@ -157,7 +196,8 @@ ClassBase.define({
     // 导入进度提示
     showNotify: function (param, result) {
         var self = this;
-        var key  = md5('store_import_'+jsonEncode(param));
+        var data = _.pick(param, ['pathFrom','pathTo']);
+        var key  = md5('store_import_'+jsonEncode(data));
         var tips = this.notifyList[key] || null;
         // 1.新建notify
         if (!tips || result === false) {
@@ -182,23 +222,44 @@ ClassBase.define({
         // 2.1 已关闭
         if (!tips || tips == 'killed') return;
         // 2.2 异常。进度：code=true：获取进度中，info=1：完成；info=0：进行中——部分无法获取到最终task，导致data=false，原因未知，暂不处理
-        // if (!result.code || !result.data || !_.has(result, 'info')) {
-        if (!result.code || !_.has(result, 'info')) {
-            var text = _.get(result, 'data') || LNG('storeImport.task.reqErr');
-            if (!_.isString(text)) text = LNG('storeImport.task.taskErr');
+        // show_tips错误(html)，该值为undefined；此时任务不一定结束，仍然关闭（kill）——实际为后端shutdown kill
+        if (_.isUndefined(result) || !result.code || !_.has(result, 'info')) {
+            var text = _.get(result, 'data', LNG['storeImport.task.reqErr']);
+            if (!_.isString(text)) text = LNG['storeImport.task.taskErr'];
             tips.icon('error').content(text).processHide().close(5000);
             this.formDisable(false);
             return;
         }
         // TODO 2.3 尚未获取到 ——也可能任务被意外结束
         if (!result.data) return;
-        // 2.4 更新进度
-        var percent = _.get(result.data, 'taskPercent') || 0;
-        var text = (_.get(result,'data.taskFinished') || 0) + ' / ' + (_.get(result,'data.taskTotal') || 0);
-        tips.content(_.get(result, 'data.currentTitle') || '').process({text: text, process: percent});
+        // 2.4 更新进度：标题右侧显示已用时长（不带标签），数字右侧显示“剩余约 xx”（都不加行，保持弹窗原尺寸）
+        var d       = _.get(result, 'data') || {};
+        var percent = _.get(d, 'taskPercent') || 0;
+        var numText = this.numShow(_.get(d, 'taskFinished')) + ' / ' + this.numShow(_.get(d, 'taskTotal'));
+        var time    = this.progressInfo(d);
+        var title   = _.get(d, 'currentTitle') || '';
+        var text    = numText;
+        if (time.elapsed > 0) {
+            // 标题右侧：xx分xx秒（不加“已用/耗时”字样）
+            title += '<span class="fl-right opacity-60">' + timeShow(time.elapsed) + '</span>';
+        }
+        if (time.need > 0) {
+            // 数字右侧：剩余约 xx（超过 5 小时按框架惯例显示“5小时以上”）
+            var needTxt = (time.need >= 18000)
+                ? '5' + LNG.space + LNG['common.hour'] + LNG.space + LNG['common.sizeMore']
+                : timeShow(time.need);
+            text += '<span class="fl-right opacity-60">' + this.lngText('storeImport.task.timeRemain', '剩余约 [0]', needTxt) + '</span>';
+        }
+        tips.content(title).process({text: text, process: percent});
         // 2.5 完成
         if (_.get(result,'info') == '1') { // percent=1
-            var msg     = _.get(result, 'data.desc') || '';
+            var msg = _.get(result, 'data.desc') || '';
+            if (!msg) {
+                // 总耗时 = 服务端最后更新时刻 - 开始时刻（原来这里取的是 timeNeed，那是“剩余”估算值）
+                var dd = result.data || {};
+                var useSec = Math.floor(parseFloat(dd.timeSave || dd.timeUpdate || 0) - parseFloat(dd.timeStart || 0));
+                if (useSec > 0) msg = this.lngText('storeImport.task.timeUsed', '总耗时 [0]', timeShow(useSec));
+            }
             if(msg) msg = '<span class="fl-right">'+msg+'</span>';
             var icon    = 'success';
             var title   = LNG['storeImport.task.importEnd'];
@@ -209,13 +270,45 @@ ClassBase.define({
                 percent = 1;
                 tips.$main.find('.process-add').css('background-color', '#ff4d4f');
             }
-            tips.icon(icon).title(title).process({text: text + msg, process: percent});
+            if (percent < 1) {
+                icon = 'warning';
+                tips.content(LNG['storeImport.task.partDesc']);
+                // tips.$main.find('.process-add').css('background-color', '#f7ba29');
+            }
+            tips.icon(icon).title(title).process({text: numText + msg, process: percent});
             this.formDisable(false);
             this._delay(function(){
                 _.unset(self.notifyList, key);
                 tips.close();
             }, 5000);
         }
+    },
+
+    // 数字千分位：76666 → 76,666
+    numShow: function (n) {
+        n = parseInt(n || 0, 10);
+        return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    },
+
+    // 取文案：缺翻译时退回默认文案（避免界面上出现 key 名）
+    lngText: function (key, def, arg) {
+        var v = LNG[key];
+        if (!v || String(v).indexOf('storeImport.') === 0) v = def;
+        return (arg === undefined) ? v : _.replace(v, '[0]', arg);
+    },
+
+    // 由任务字段推导两个时长（秒）：已用 = 服务端最后时刻 - 开始时刻；剩余 = timeNeed（缺失时按平均速度兜底）
+    progressInfo: function (d) {
+        // var now   = parseFloat(d.timeSave || d.timeUpdate || 0);   // 服务端时刻，避免客户端时钟偏差
+        var now   = time();
+        var start = parseFloat(d.timeStart || 0);
+        var speed = parseFloat(d.taskSpeed || 0) || 0;
+        var need  = parseFloat(d.timeNeed  || 0) || 0;
+        var done  = parseInt(d.taskFinished || 0, 10);
+        var total = parseInt(d.taskTotal    || 0, 10);
+        var elapsed = (now && start && now > start) ? Math.floor(now - start) : 0;
+        if (need <= 0 && speed > 0 && total > done) {need = (total - done) / speed;}
+        return {elapsed: elapsed, need: need > 0 ? Math.floor(need) : 0};
     },
 
     // 禁/启用dialog中的操作
@@ -227,6 +320,9 @@ ClassBase.define({
             '.aui-dialog .aui-footer button',
         ];
         $form.find(_.join(buttons)).prop('disabled', status);
+
+        // 更新日志记录
+        if (!status) this.initLogList();
     }
 
 });

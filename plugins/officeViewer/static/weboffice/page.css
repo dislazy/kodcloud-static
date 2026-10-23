@@ -65,32 +65,52 @@ body.weboffice-page.ol.loaded .page-box.pptx #output::before {
     width: 100px;
     z-index: 9;
 }
-body.weboffice-page.loaded .page-box.kod-luckysheet-box #output::after, 
-body.weboffice-page.loaded .page-box.kod-pptxjs-box #output::after {
-    /* content: 'xxx'; */
-    content: attr(data-content);
-    position: absolute;
-    bottom: 5px;
-    font-size: 0.85em;
-    left: 50%;
-    transform: translateX(-50%);
-    bottom: 3px;
-    /* color: #f77714;
-    background: #fff3cf;
-    color: #c17500; */
-    padding: 3px 10px;
+body.weboffice-page.loaded .wb-alert {
+    /* font-size: 0.85em; */
+    /* left: 50%; transform: translateX(-50%); */
+    left: 0;right: 0;margin: 0 auto;
+    width: fit-content;
+    max-width: calc(100% - 40px);
+    box-sizing: border-box;
+
+    bottom: 2px;
+    /* padding: 4px 12px; */
+    padding: 4px 10px;
     border-radius: 4px;
-    /* width: max-content; */
     text-align: center;
     z-index: 9999;
-	font-size:12px;min-width: 350px;
-    color: #888;background: #f6f6f6;
-    opacity: 0.9;
+	font-size:12px;
+    min-width: 350px;
+    position: fixed;
+    background: #fffbe6;
+    border-color: #f5edc3;
+    color: #96883c;
 }
-/* body.weboffice-page.loaded .page-box.kod-luckysheet-box #output.tip-hide::after, 
-body.weboffice-page.loaded .page-box.kod-pptxjs-box #output.tip-hide::after {
-    opacity: 0;
-} */
+body.weboffice-page.loaded .wb-alert:hover span {
+    display: block;
+}
+body.weboffice-page.loaded .wb-alert span {
+    /* content: '✕'; */
+    color: #fff;
+    position: absolute;
+    background: green;
+    border-radius: 50%;
+    cursor: pointer;
+    /* top: -5px;right: -5px;
+    width: 14px;height: 14px;line-height: 14px;
+    font-size: 0.7em;
+    background: #f5edc3;
+    color: #96883c;
+    border: 1px solid #ffa500;
+    color: #ffa500;
+    font-weight: 600; */
+    top: -3px;right: -3px;
+    width: 12px;height: 12px;line-height: 12px;
+    font-size: 0.8em;
+    background: #ffa500db;
+    color: #fff;
+    display: none;
+}
 
 .weboffice-page .hidden {display: none;}
 .weboffice-page .loading-msg .loading-msg-content .loading-msg-title{font-size: 14px;}
@@ -99,17 +119,11 @@ body.weboffice-page.loaded .page-box.kod-pptxjs-box #output.tip-hide::after {
     position: fixed;
     right: 20px;
     z-index: 999;
-
-    bottom: 60px;
-    right: 40px;
     display: none;
+    top: 3px; right: 15px;
 }
 .weboffice-page.edit-mode.loaded>.edit-btn {
     display: block;
-}
-.weboffice-page>.edit-btn.lky {
-    right: 18px;
-    top: 3px;
 }
 .weboffice-page>.edit-btn button {
     font-size: 12px;
@@ -118,24 +132,26 @@ body.weboffice-page.loaded .page-box.kod-pptxjs-box #output.tip-hide::after {
     background-color: #fff;
     border-radius: 4px;
 
-    width: 55px;
-    height: 55px;
-    border-radius: 100%;
-    border: none;
-    box-shadow: 0 5px 20px rgb(0 0 0 / 15%);
-}
-.weboffice-page>.edit-btn.lky button {
-    border-color: #7ec1ff;
-    color: #7ec1ff;
+    border-radius: 4px;
+    color: #fff;
+    color: #1890ff;
+    padding: 3px 10px;
+    /* border: 1px solid #007cee; */
+    border: 1px solid #1890ff;
+    /* background: #1890ff; */
+    background: #fff;
+
+    /* background: #1890ff20; */
 }
 .weboffice-page>.edit-btn button:hover,
 .weboffice-page>.edit-btn button:focus,
 .weboffice-page>.edit-btn button:active {
-    background-color: #f9f9f9;
-    box-shadow: 0 5px 20px rgb(0 0 0 / 20%);
+    background: #def;
+    /* background: #1890ff40; */
 }
-.weboffice-page>.edit-btn button i {
+.weboffice-page>.edit-btn button .font-icon {
     vertical-align: text-top;
+    margin-right: 2px;
 }
 
 /* iframe下的 loading 框 */

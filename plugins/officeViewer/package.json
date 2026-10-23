@@ -2,7 +2,7 @@
 	"id":"officeViewer",
 	"name":"{{LNG['officeViewer.meta.name']}}",
 	"title":"{{LNG['officeViewer.meta.title']}}",
-	"version":"1.34",
+	"version":"1.41",
 	"category":"file",
 	"source":{
 		"icon":"{{pluginHost}}static/images/icon.png"
@@ -12,13 +12,14 @@
 		"copyright":"kodcloud",
 		"homePage":"http://kodcloud.com"
 	},
+	"meta":{"needNetwork": 1},
 	"networkDesc": "{{LNG['officeViewer.meta.netwrokDesc']}}",
 	"configItem":{
 		"formStyle":{
 			"className":"form-box-title-left",
 			"tabs":{
 				"{{LNG['admin.setting.base']}}":"pluginAuth,sep001,openWith,fileSort,fileExt",
-				"{{LNG['officeViewer.meta.service']}}":"openType,sep002,wbDesc,wbFileExt,lbOpen,lbSoffice,lbFileExt,olOpen,olApiServer,olFileExt,yzOpen,yzFileExt"
+				"{{LNG['officeViewer.meta.service']}}":"openType,sep002,wbDesc,wbTipsOpen,wbFileExt,lbOpen,lbSoffice,lbFileExt,olOpen,olApiServer,olFileExt,yzOpen,yzFileExt"
 			},
 			"loadFile":"{{pluginHost}}static/libreoffice/check.js"
 		},
@@ -64,7 +65,7 @@
 				"yz":"{{LNG['officeViewer.yzOffice.name']}}"
 			},
 			"switchItem":{
-				"wb":"wbDesc,wbFileExt",
+				"wb":"wbDesc,wbTipsOpen,wbFileExt",
 				"lb":"lbOpen,lbSoffice,lbFileExt",
 				"ol":"olOpen,olApiServer,olFileExt",
 				"yz":"yzOpen,yzFileExt"
@@ -76,6 +77,13 @@
 			"type":"html",
 			"display":"{{LNG['officeViewer.meta.instruction']}}",
 			"desc":"{{LNG['officeViewer.webOffice.desc']}}"
+		},
+		"wbTipsOpen":{
+			"type":"switch",
+			"value":1,
+			"display":"开启提示",
+			"desc":"自动解析模式下，页面底部会显示“……内容可能显示不全或异常”的提示，建议开启",
+			"className":"hidden"
 		},
 		"wbFileExt":{
 			"type":"tags",
@@ -107,17 +115,16 @@
 
 		"olOpen":{
 			"type":"switch",
-			"value":1,
+			"value":0,
 			"display":"{{LNG['officeViewer.meta.svcOpen']}}",
 			"desc":"{{LNG['officeViewer.officeLive.desc']}}",
 			"switchItem":{"0":"","1":"olApiServer,olFileExt"}
 		},
 		"olApiServer":{
 			"type":"input",
-			"value":"https://view.officeapps.live.com/op/embed.aspx?src=",
+			"value":"",
 			"display":"{{LNG['officeViewer.officeLive.apiServer']}}",
 			"desc":"{{LNG['officeViewer.officeLive.apiServerDesc']}}",
-			"require":1
 		},
 		"olFileExt":{
 			"type":"tags",
@@ -128,7 +135,7 @@
 
 		"yzOpen":{
 			"type":"switch",
-			"value":1,
+			"value":0,
 			"display":"{{LNG['officeViewer.meta.svcOpen']}}",
 			"desc":"{{LNG['officeViewer.yzOffice.desc']}}",
 			"switchItem":{"0":"","1":"yzFileExt"}
